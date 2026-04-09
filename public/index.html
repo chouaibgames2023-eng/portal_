@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lab44 — Student Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/public/css/styles.css"/>
+  <style>
+    /* Page-specific overrides */
+    .login-page { max-width: 440px; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <header class="header">
+    <div class="lab-tag">Lab44 · EE & Networks & Telecom</div>
+    <h1>Student Login</h1>
+    <p>Sign in to view your lab grades</p>
+  </header>
+  
+  <div class="card">
+    <div class="section-title">Your credentials</div>
+
+    <div id="alert" class="alert"></div>
+
+    <form id="form" novalidate>
+      <div class="field">
+        <label for="first_name">First Name <span class="req">*</span></label>
+        <input type="text" id="first_name" placeholder="e.g. Ahmed" autocomplete="given-name"/>
+        <div class="field-err" id="err_fn"></div>
+      </div>
+      <div class="field">
+        <label for="last_name">Last Name <span class="req">*</span></label>
+        <input type="text" id="last_name" placeholder="e.g. Benali" autocomplete="family-name"/>
+        <div class="field-err" id="err_ln"></div>
+      </div>
+      <div class="field">
+        <label for="student_id">Student ID <span class="req">*</span></label>
+        <input type="text" id="student_id" placeholder="e.g. 2024001"/>
+        <div class="field-err" id="err_sid"></div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Sign In
+      </button>
+    </form>
+
+    <div class="divider"></div>
+
+    <div id="register-section"><!-- filled by JS --></div>
+  </div>
+
+  <footer>© <span id="yr"></span> Lab44</footer>
+</div>
+
+<script src="/public/js/utils.js"></script>
+<script>
+// ── Page Logic ─────────────────────────────────────────────────────────────────
+(async function() {
+  await Lab44Config.load();
+  document.getElementById('yr').textContent = new Date().getFullYear();
+  
+  // Check signup status
+  checkSignup();
+  
+  // Attach live validation
+  ['first_name', 'last_name', 'student_id'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      const errId = `err_${id === 'first_name' ? 'fn' : id === 'last_name' ? 'ln' : 'sid'}`;
+      Lab44UI.fieldError(errId, '');
+      Lab44UI.markInput(id, '');
+      Lab44UI.clearAlert('alert');
+    });
+  });
+  
+  // Form submission
+  document.getElementById('form').addEventListener('submit', async e => {
+    e.preventDefault();
+    Lab44UI.clearAlert('alert');
+    
+    // Validate
+    let valid = true;
+    const fn = document.getElementById('first_name').value.trim();
+    const ln = document.getElementById('last_name').value.trim();
+    const sid = document.getElementById('student_id').value.trim();
+    
+    const fnVal = Lab44Validation.validateName(fn);
+    if (!fnVal.valid) {
+      Lab44UI.fieldError('err_fn', fnVal.message);
+      Lab44UI.markInput('first_name', 'err');
+      valid = false;
+    }
+    
+    const lnVal = Lab44Validation.validateName(ln);
+    if (!lnVal.valid) {
+      Lab44UI.fieldError('err_ln', lnVal.message);
+      Lab44UI.markInput('last_name', 'err');
+      valid = false;
+    }
+    
+    const sidVal = Lab44Validation.validateStudentId(sid);
+    if (!sidVal.valid) {
+      Lab44UI.fieldError('err_sid', sidVal.message);
+      Lab44UI.markInput('student_id', 'err');
+      valid = false;
+    }
+    
+    if (!valid) return;
+    
+    // Submit login
+    const btn = document.getElementById('btn');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span> Signing in…`;
+    
+    try {
+      const res = await fetch(`${Lab44Config.api}/auth/student`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ first_name: fn, last_name: ln, student_id: sid })
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        Lab44UI.showAlert('alert', data.error || 'Login failed.');
+      } else {
+        sessionStorage.setItem('lab44_role', 'student');
+        sessionStorage.setItem('lab44_student', JSON.stringify(data.student));
+        Lab44UI.showAlert('alert', `Welcome back, ${data.student.first_name}! Redirecting…`, 'success');
+        setTimeout(() => { window.location.href = 'studentsinterface.html'; }, 900);
+      }
+    } catch {
+      Lab44UI.showAlert('alert', 'Cannot reach server. Make sure it is running.');
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Sign In`;
+  });
+})();
+
+async function checkSignup() {
+  try {
+    const res = await fetch(`${Lab44Config.api}/settings`);
+    const data = await res.json();
+    const sec = document.getElementById('register-section');
+    
+    if (data.signup_enabled === 'true') {
+      sec.innerHTML = `<div class="register-link">First time here? <a href="register.html">Register your account</a></div>`;
+    } else {
+      sec.innerHTML = `<div class="register-disabled">Registration is currently closed. Contact your instructor.</div>`;
+    }
+  } catch(_) {}
+}
+</script>
+</body>
+</html>
