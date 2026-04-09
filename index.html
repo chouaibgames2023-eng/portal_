@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lab44 — Student Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --bg:#f2f3f5;--surface:#fff;--surface2:#f7f8fa;
+      --border:#d8dce3;--border-hi:#b8bec9;
+      --text:#1c2128;--text-muted:#5a6272;--text-light:#9099a8;
+      --accent:#2a5bd7;--accent-dim:rgba(42,91,215,.08);--accent-hover:#1e4ec2;
+      --success:#2e7d4f;--success-bg:#f0f7f3;--success-bd:#b6d9c5;
+      --error:#b91c1c;--error-bg:#fdf2f2;--error-bd:#f9c9c9;
+      --mono:"IBM Plex Mono",monospace;--sans:"IBM Plex Sans",sans-serif;
+      --radius:8px;--radius-sm:5px;
+      --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.07);
+      --tr:0.16s ease;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+    .page{flex:1;display:flex;flex-direction:column;align-items:center;padding:52px 16px 64px}
+
+    .header{text-align:center;margin-bottom:28px;animation:fadeDown .4s ease both}
+    .lab-tag{display:inline-block;font-family:var(--mono);font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--text-light);border:1px solid var(--border);border-radius:99px;padding:4px 14px;margin-bottom:16px;background:var(--surface)}
+    .header h1{font-size:1.6rem;font-weight:600;letter-spacing:-.01em}
+    .header p{margin-top:5px;font-size:.85rem;color:var(--text-muted)}
+
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:32px;width:100%;max-width:440px;animation:fadeUp .4s ease both}
+
+    .section-title{font-family:var(--mono);font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--text-light);margin-bottom:18px;display:flex;align-items:center;gap:10px}
+    .section-title::after{content:"";flex:1;height:1px;background:var(--border)}
+
+    .field{margin-bottom:14px}
+    .field:last-of-type{margin-bottom:0}
+    label{display:block;font-size:.8rem;font-weight:500;margin-bottom:6px}
+    label .req{color:var(--text-light);font-weight:400;margin-left:2px}
+    input[type=text]{width:100%;padding:9px 12px;font-family:var(--sans);font-size:.875rem;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;transition:border-color var(--tr),box-shadow var(--tr)}
+    input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+    input.err{border-color:var(--error)}
+    input.ok{border-color:var(--border-hi)}
+    .field-err{margin-top:5px;font-size:.73rem;color:var(--error);display:flex;align-items:center;gap:4px;animation:fadeIn .15s ease}
+
+    .alert{padding:11px 14px;border-radius:var(--radius-sm);font-size:.82rem;margin-bottom:16px;display:none;animation:fadeIn .2s ease;line-height:1.5}
+    .alert.show{display:block}
+    .alert-error{background:var(--error-bg);border:1px solid var(--error-bd);color:var(--error)}
+    .alert-success{background:var(--success-bg);border:1px solid var(--success-bd);color:var(--success)}
+
+    .btn-primary{width:100%;margin-top:22px;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--sans);font-size:.875rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background var(--tr),box-shadow var(--tr),transform .12s;box-shadow:0 1px 3px rgba(42,91,215,.25)}
+    .btn-primary:hover:not(:disabled){background:var(--accent-hover);box-shadow:0 2px 8px rgba(42,91,215,.3);transform:translateY(-1px)}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+    .spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .65s linear infinite;flex-shrink:0}
+
+    .divider{height:1px;background:var(--border);margin:22px 0}
+
+    .register-link{text-align:center;font-size:.82rem;color:var(--text-muted)}
+    .register-link a{color:var(--accent);font-weight:500;text-decoration:none}
+    .register-link a:hover{text-decoration:underline}
+
+    .register-disabled{text-align:center;font-size:.78rem;color:var(--text-light);padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:12px}
+
+    footer{margin-top:24px;font-size:.72rem;color:var(--text-light);text-align:center}
+
+    @keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+<div class="page">
+  <header class="header">
+    <div class="lab-tag">Lab44 · EE &amp; Networks &amp; Telecom</div>
+    <h1>Student Login</h1>
+    <p>Sign in to view your lab grades</p>
+  </header>
+
+  <div class="card">
+    <div class="section-title">Your credentials</div>
+
+    <div id="alert" class="alert"></div>
+
+    <form id="form" novalidate>
+      <div class="field">
+        <label for="first_name">First Name <span class="req">*</span></label>
+        <input type="text" id="first_name" placeholder="e.g. Ahmed" autocomplete="given-name"/>
+        <div class="field-err" id="err_fn"></div>
+      </div>
+      <div class="field">
+        <label for="last_name">Last Name <span class="req">*</span></label>
+        <input type="text" id="last_name" placeholder="e.g. Benali" autocomplete="family-name"/>
+        <div class="field-err" id="err_ln"></div>
+      </div>
+      <div class="field">
+        <label for="student_id">Student ID <span class="req">*</span></label>
+        <input type="text" id="student_id" placeholder="e.g. 2024001"/>
+        <div class="field-err" id="err_sid"></div>
+      </div>
+
+      <button type="submit" class="btn-primary" id="btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Sign In
+      </button>
+    </form>
+
+    <div class="divider"></div>
+
+    <div id="register-section"><!-- filled by JS --></div>
+  </div>
+
+
+  <footer>© <span id="yr"></span> Lab44</footer>
+</div>
+
+<script>
+  // ── API bootstrap — fetch config from THIS server so you never hardcode IPs in HTML ──
+  // The page is served by the student server (port 3000 by default).
+  // /api/config returns { student_api, admin_api, guacamole_url }.
+  const _configBase = window.location.origin; // same host:port that served this file
+  let API = _configBase + '/api'; // temporary fallback until config loads
+  async function loadConfig() {
+    try {
+      const r = await fetch(_configBase + '/api/config');
+      const c = await r.json();
+      API = c.student_api + '/api';
+    } catch(_) {}
+    return API;
+  }
+  document.getElementById('yr').textContent = new Date().getFullYear();
+
+  // Check signup status to show/hide register link
+  async function checkSignup() {
+    await loadConfig();
+    try {
+      const res  = await fetch(`${API}/settings`);
+      const data = await res.json();
+      const sec  = document.getElementById('register-section');
+      if (data.signup_enabled === 'true') {
+        sec.innerHTML = `<div class="register-link">First time here? <a href="register.html">Register your account</a></div>`;
+      } else {
+        sec.innerHTML = `<div class="register-disabled">Registration is currently closed. Contact your instructor.</div>`;
+      }
+    } catch(_) {}
+  }
+  checkSignup();
+
+  // Field helpers
+  function fieldErr(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = msg ? 'flex' : 'none';
+  }
+  function markInput(id, state) {
+    const el = document.getElementById(id);
+    el.classList.remove('err','ok');
+    if (state) el.classList.add(state);
+  }
+  function showAlert(msg, type='error') {
+    const el = document.getElementById('alert');
+    el.className = `alert alert-${type} show`;
+    el.textContent = msg;
+  }
+  function clearAlert() {
+    const el = document.getElementById('alert');
+    el.className = 'alert';
+    el.textContent = '';
+  }
+
+  // Live validation
+  ['first_name','last_name','student_id'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      fieldErr(`err_${id==='first_name'?'fn':id==='last_name'?'ln':'sid'}`, '');
+      markInput(id, '');
+    });
+  });
+
+  function validate() {
+    let ok = true;
+    const fn  = document.getElementById('first_name').value.trim();
+    const ln  = document.getElementById('last_name').value.trim();
+    const sid = document.getElementById('student_id').value.trim();
+    if (!fn || fn.length < 2)  { fieldErr('err_fn',  'Minimum 2 characters.'); markInput('first_name', 'err'); ok=false; }
+    if (!ln || ln.length < 2)  { fieldErr('err_ln',  'Minimum 2 characters.'); markInput('last_name',  'err'); ok=false; }
+    if (!sid || sid.length < 3){ fieldErr('err_sid', 'Minimum 3 characters.'); markInput('student_id', 'err'); ok=false; }
+    return ok;
+  }
+
+  document.getElementById('form').addEventListener('submit', async e => {
+    e.preventDefault();
+    clearAlert();
+    if (!validate()) return;
+    await loadConfig();
+
+    const btn = document.getElementById('btn');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span> Signing in…`;
+
+    try {
+      const res  = await fetch(`${API}/auth/student`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          first_name: document.getElementById('first_name').value.trim(),
+          last_name:  document.getElementById('last_name').value.trim(),
+          student_id: document.getElementById('student_id').value.trim(),
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showAlert(data.error || 'Login failed.');
+      } else {
+        sessionStorage.setItem('lab44_role', 'student');
+        sessionStorage.setItem('lab44_student', JSON.stringify(data.student));
+        showAlert('Welcome back, ' + data.student.first_name + '! Redirecting…', 'success');
+        setTimeout(() => { window.location.href = 'studentsinterface.html'; }, 900);
+      }
+    } catch {
+      showAlert('Cannot reach server. Make sure it is running.');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Sign In`;
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>(function(){if(sessionStorage.getItem('lab44_role')!=='admin')window.location.replace('admin.html')})()</script>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab44 — VM Monitoring</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#f2f3f5;--surface:#fff;--surface2:#f7f8fa;--border:#d8dce3;--border-hi:#b8bec9;--text:#1c2128;--text-muted:#5a6272;--text-light:#9099a8;--accent:#2a5bd7;--accent-dim:rgba(42,91,215,.08);--accent-hover:#1e4ec2;--success:#2e7d4f;--success-bg:#f0f7f3;--success-bd:#b6d9c5;--success-hover:#24633e;--warning:#b75c00;--warning-bg:#fff6eb;--warning-bd:#ffd9ad;--warning-hover:#9c4e00;--error:#b91c1c;--error-bg:#fdf2f2;--error-bd:#f9c9c9;--mono:"IBM Plex Mono",monospace;--sans:"IBM Plex Sans",sans-serif;--radius:8px;--radius-sm:5px;--shadow:0 1px 2px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.07);--tr:0.15s ease}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.logo{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.65rem;color:#fff;font-weight:500}
+.topbar-title{font-weight:600;font-size:.9rem}.topbar-sep{color:var(--border-hi)}.topbar-page{font-size:.8rem;color:var(--text-muted)}
+.topbar-right{display:flex;gap:8px;align-items:center}
+.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:var(--radius-sm);font-family:var(--sans);font-size:.78rem;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-muted);transition:all var(--tr)}
+.tbtn:hover{background:var(--surface2);color:var(--text)}
+.port-badge{font-family:var(--mono);font-size:.6rem;background:rgba(42,91,215,.12);color:var(--accent);border:1px solid rgba(42,91,215,.2);border-radius:4px;padding:2px 7px;margin-left:6px}
+.pending-banner{background:var(--warning-bg);border-bottom:1px solid var(--warning-bd);padding:10px 28px;display:none;align-items:center;gap:12px;font-size:.82rem;color:var(--warning)}
+.pending-banner strong{font-weight:600}
+.pending-banner-btn{margin-left:auto;padding:4px 12px;background:var(--warning);color:#fff;border:none;border-radius:var(--radius-sm);font-size:.75rem;font-weight:500;cursor:pointer;font-family:var(--sans)}
+.pending-banner-btn:hover{background:var(--warning-hover)}
+.page-wrapper{flex:1;display:flex;flex-direction:column;align-items:center;padding:24px 20px 64px}
+.container{width:100%;max-width:1100px;display:flex;flex-direction:column;gap:16px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:780px){.two-col{grid-template-columns:1fr}}
+.section-title{font-family:var(--mono);font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--text-light);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.section-title::after{content:"";flex:1;height:1px;background:var(--border)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 24px}
+.req-panel{background:var(--surface);border:1px solid var(--warning-bd);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 24px}
+.conn-fields{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:.78rem;font-weight:500;color:var(--text)}
+input[type=text],input[type=password],input[type=number]{padding:7px 10px;font-family:var(--sans);font-size:.84rem;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;transition:all var(--tr)}
+input[type=text]{width:155px}input[type=password]{width:150px}input[type=number]{width:80px}
+#xcp-host{width:180px}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.btn{padding:7px 14px;border:none;border-radius:var(--radius-sm);font-family:var(--sans);font-size:.8rem;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all var(--tr);white-space:nowrap}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover:not(:disabled){background:var(--accent-hover)}
+.btn-success{background:var(--success);color:#fff}.btn-success:hover:not(:disabled){background:var(--success-hover)}
+.btn-warning{background:var(--warning);color:#fff}.btn-warning:hover:not(:disabled){background:var(--warning-hover)}
+.btn-danger{background:transparent;color:var(--error);border:1px solid var(--error-bd)}.btn-danger:hover:not(:disabled){background:var(--error-bg)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text-muted)}.btn-outline:hover:not(:disabled){background:var(--surface2);border-color:var(--border-hi);color:var(--text)}
+.btn-disconnect{background:transparent;color:var(--error);border:1px solid var(--error-bd)}.btn-disconnect:hover{background:var(--error-bg)}
+.btn-sm{padding:4px 10px;font-size:.72rem}
+#login-error,#error-msg{color:var(--error);background:var(--error-bg);border:1px solid var(--error-bd);border-radius:var(--radius-sm);padding:9px 13px;margin-top:12px;font-size:.82rem;display:none}
+#login-error:not(:empty),#error-msg:not(:empty){display:block}
+.ssl-note{background:var(--warning-bg);border:1px solid var(--warning-bd);border-radius:var(--radius-sm);padding:9px 13px;font-size:.77rem;color:var(--warning);margin-top:12px;display:flex;align-items:flex-start;gap:8px;line-height:1.5}
+.ssl-note a{color:var(--warning);font-weight:600}
+.controls-bar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin-bottom:14px}
+.vm-list{padding:0;list-style:none;display:flex;flex-direction:column;gap:7px;max-height:440px;overflow-y:auto}
+.vm-list li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.83rem;transition:all var(--tr)}
+.vm-list li:hover{border-color:var(--border-hi)}
+.vm-info{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.vm-header{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.vm-name{font-weight:600;color:var(--text);font-size:.86rem}
+.vm-meta{display:flex;align-items:center;flex-wrap:wrap;gap:5px;font-family:var(--mono);font-size:.62rem;color:var(--text-muted);margin-top:2px}
+.vm-meta code{background:var(--surface2);padding:1px 5px;border-radius:3px;border:1px solid var(--border)}
+.vm-actions{display:flex;align-items:center;flex-wrap:wrap;gap:5px}
+.ps-running{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:.63rem;font-weight:500;background:var(--success-bg);color:var(--success);border:1px solid var(--success-bd)}
+.ps-halted{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:.63rem;font-weight:500;background:var(--error-bg);color:var(--error);border:1px solid var(--error-bd)}
+.ps-other{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:.63rem;font-weight:500;background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning-bd);animation:pulse 1.5s infinite}
+.vm-empty{padding:18px;text-align:center;color:var(--text-light);font-size:.8rem;background:var(--surface2);border:1px dashed var(--border);border-radius:var(--radius-sm);font-style:italic;list-style:none}
+.badge-tpl{font-family:var(--mono);font-size:.56rem;text-transform:uppercase;letter-spacing:.05em;background:var(--success-bg);color:var(--success);border-radius:3px;padding:1px 6px;border:1px solid var(--success-bd)}
+.badge-clone{font-family:var(--mono);font-size:.56rem;text-transform:uppercase;letter-spacing:.05em;background:var(--accent-dim);color:var(--accent);border-radius:3px;padding:1px 6px;border:1px solid rgba(42,91,215,.15)}
+.assign-table{width:100%;border-collapse:collapse;font-size:.81rem}
+.assign-table thead tr{background:var(--surface2);border-bottom:2px solid var(--border)}
+.assign-table thead th{padding:8px 12px;text-align:left;font-family:var(--mono);font-size:.57rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-light);font-weight:500;white-space:nowrap}
+.assign-table tbody tr{border-bottom:1px solid var(--border)}
+.assign-table tbody tr:last-child{border-bottom:none}
+.assign-table td{padding:9px 12px;vertical-align:middle}
+.ip-chip{font-family:var(--mono);font-size:.75rem;background:var(--surface2);border:1px solid var(--border);padding:2px 8px;border-radius:4px;color:var(--text)}
+.proto-chip{font-family:var(--mono);font-size:.62rem;text-transform:uppercase;padding:2px 7px;border-radius:3px;font-weight:500}
+.proto-ssh{background:#1c212810;color:var(--text-muted);border:1px solid var(--border)}
+.proto-rdp{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(42,91,215,.2)}
+.guac-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:var(--radius-sm);font-size:.72rem;font-weight:600;text-decoration:none;transition:background .12s;white-space:nowrap;cursor:pointer}
+.guac-ssh{background:var(--text);color:#fff}.guac-ssh:hover{background:#2d3748}
+.guac-rdp{background:var(--accent);color:#fff}.guac-rdp:hover{background:var(--accent-hover)}
+.req-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;background:var(--warning-bg);border:1px solid var(--warning-bd);border-radius:var(--radius-sm);margin-bottom:7px}
+.req-row:last-child{margin-bottom:0}
+.req-student{font-weight:600;font-size:.84rem}
+.req-meta{font-family:var(--mono);font-size:.65rem;color:var(--text-muted);margin-top:2px}
+.req-template{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;background:var(--accent-dim);border:1px solid rgba(42,91,215,.15);border-radius:3px;font-family:var(--mono);font-size:.63rem;color:var(--accent);margin-top:4px}
+.req-actions{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap}
+.spinner{width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:currentColor;border-radius:50%;animation:spin .65s linear infinite;flex-shrink:0;display:inline-block}
+.spinner-dark{border:2px solid var(--border);border-top-color:var(--accent)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--surface);border-radius:var(--radius);box-shadow:0 8px 40px rgba(0,0,0,.18);padding:28px;width:100%;max-width:400px}
+.modal h2{font-size:1rem;font-weight:600;margin-bottom:6px}
+.modal p{font-size:.82rem;color:var(--text-muted);margin-bottom:18px;line-height:1.5}
+.modal-field{margin-bottom:13px}
+.modal-field label{display:block;font-size:.78rem;font-weight:500;margin-bottom:5px}
+.modal-field input,.modal-field textarea,.modal-field select{width:100%;padding:8px 11px;font-family:var(--sans);font-size:.84rem;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;transition:all var(--tr)}
+.modal-field textarea{resize:vertical;min-height:64px}
+.modal-field input:focus,.modal-field textarea:focus,.modal-field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="topbar-left">
+    <div class="logo">L44</div>
+    <span class="topbar-title">Lab44</span><span class="topbar-sep">/</span>
+    <span class="topbar-page">VM Monitoring</span>
+    <span class="port-badge">:4000</span>
+  </div>
+  <div class="topbar-right">
+    <button class="tbtn" onclick="window.location.href='students.html'">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>Admin Panel
+    </button>
+    <button class="tbtn" onclick="sessionStorage.removeItem('lab44_role');window.location.href='admin.html'">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout
+    </button>
+  </div>
+</nav>
+
+<div id="pending-banner" class="pending-banner">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  <span id="pending-text"></span>
+  <button class="pending-banner-btn" onclick="document.getElementById('requests-panel').scrollIntoView({behavior:'smooth'})">View ↓</button>
+</div>
+
+<div class="page-wrapper"><div class="container">
+
+  <!-- ── Pending Requests ── -->
+  <div class="req-panel" id="requests-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div class="section-title" style="color:var(--warning);margin-bottom:0;flex:1;min-width:120px">Pending VM Requests</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="loadAllRequests()">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Refresh
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="clearHistory(false)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>Clear History
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="clearHistory(true)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>Clear All
+        </button>
+      </div>
+    </div>
+    <div id="req-list"><div style="color:var(--text-light);font-size:.82rem;font-style:italic">Loading…</div></div>
+  </div>
+
+  <!-- ── Student VM Assignments ── -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div class="section-title" style="margin-bottom:0;flex:1">Student VM Assignments</div>
+      <button class="btn btn-outline btn-sm" onclick="loadAssignments()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Refresh IPs
+      </button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="assign-table">
+        <thead><tr>
+          <th>Student</th><th>VM Name</th><th>IP Address</th><th>Power</th><th>Quick Access</th><th></th>
+        </tr></thead>
+        <tbody id="assign-body"><tr><td colspan="7" style="text-align:center;padding:18px;color:var(--text-light);font-style:italic">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Main Panel ── -->
+  <div id="main-panel" style="display:flex;flex-direction:column;gap:16px">
+
+    <div class="card">
+      <div class="section-title">Controls</div>
+      <div class="controls-bar">
+        <div class="field"><label>Clone Prefix</label><input type="text" id="prefix-input" value="student"/></div>
+        <div class="field"><label>Count</label><input type="number" id="clone-count" value="1" min="1" max="50"/></div>
+        <button class="btn btn-outline btn-sm" id="load-vms-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Refresh VMs
+        </button>
+      </div>
+      <div id="error-msg"></div>
+    </div>
+
+    <div class="two-col">
+      <!-- Templates Window -->
+      <div class="card">
+        <div class="section-title">Templates <span id="tpl-count" style="font-family:var(--mono);font-size:.62rem;color:var(--text-light)"></span></div>
+        <ul class="vm-list" id="tpl-list"><li class="vm-empty">Loading templates…</li></ul>
+      </div>
+
+      <!-- Cloned VMs Window -->
+      <div class="card">
+        <div class="section-title">Cloned VMs <span id="clone-count-badge" style="font-family:var(--mono);font-size:.62rem;color:var(--text-light)"></span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+          <button class="btn btn-success btn-sm" id="start-all-btn">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>Start All
+          </button>
+          <button class="btn btn-danger btn-sm" id="stop-all-btn">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>Stop All
+          </button>
+          <button class="btn btn-outline btn-sm" id="export-btn">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV
+          </button>
+          <button class="btn btn-danger btn-sm" id="clear-all-btn" style="margin-left:auto">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>Delete All
+          </button>
+        </div>
+        <ul class="vm-list" id="cloned-vms"><li class="vm-empty">No clones yet</li></ul>
+      </div>
+    </div>
+
+  </div><!-- /main-panel -->
+</div></div>
+
+<!-- Modal -->
+<div id="modal-wrap" style="display:none">
+  <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal" id="modal-inner"></div>
+  </div>
+</div>
+
+<script>
+const _configBase = window.location.origin;
+let LAB44_API = _configBase + '/api';
+let GUAC_URL  = 'http://192.168.1.136:8080/guacamole';
+(async () => {
+  try { const r=await fetch(_configBase+'/api/config'); const c=await r.json(); LAB44_API=c.admin_api+'/api'; if(c.guacamole_url)GUAC_URL=c.guacamole_url; } catch(_) {}
+  init();
+})();
+
+const esc  = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const escJ = s => String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"');
+const $    = id => document.getElementById(id);
+function psClass(ps){ return ps==='Running'?'ps-running':ps==='Halted'?'ps-halted':'ps-other'; }
+
+function guacURL(protocol, host) {
+  if(!GUAC_URL||!host) return null;
+  const port = protocol==='rdp'?'3389':'22';
+  return `${GUAC_URL.replace(/\/$/,'')}/#/client/${btoa(`${protocol}://admin:000000@${host}:${port}/?security=any&ignore-cert=true`)}`;
+}
+function showModal(html){ $('modal-inner').innerHTML=html; $('modal-wrap').style.display='block'; }
+function closeModal(){ $('modal-wrap').style.display='none'; }
+
+const SVG={
+  play:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
+  stop:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`,
+  reboot:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`,
+  clone:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+  trash:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let allVMs={templates:[],clones:[]};
+const errMsg=$('error-msg');
+
+// ── Load VMs via backend proxy ────────────────────────────────────────────────
+async function loadVms(){
+  const btn=$('load-vms-btn');
+  btn.disabled=true;btn.innerHTML=`<span class="spinner spinner-dark"></span> Loading…`;
+  $('tpl-list').innerHTML='';$('cloned-vms').innerHTML='';
+  if(errMsg)errMsg.textContent='';
+  try{
+    const [tplRes, vmRes] = await Promise.all([
+      fetch(`${LAB44_API}/xo/templates`),
+      fetch(`${LAB44_API}/xapi/vms`)
+    ]);
+    const tplData = await tplRes.json();
+    const vmData  = await vmRes.json();
+    allVMs.templates = tplData.templates || [];
+    allVMs.clones    = vmData.vms        || [];
+    renderTemplates();
+    renderClones();
+  } catch(e){
+    if(errMsg) errMsg.textContent='Failed to load: '+e.message;
+  } finally{
+    btn.disabled=false;btn.innerHTML=SVG.reboot+' Refresh VMs';
+  }
+}
+
+// ── Templates window ──────────────────────────────────────────────────────────
+function renderTemplates(){
+  const list=$('tpl-list');
+  $('tpl-count').textContent=`(${allVMs.templates.length})`;
+  if(!allVMs.templates.length){list.innerHTML="<li class='vm-empty'>No custom templates found.</li>";return;}
+  list.innerHTML='';
+  allVMs.templates.forEach(vm=>{
+    const mem=vm.memory?(vm.memory/(1024**3)).toFixed(1)+' GB':'';
+    const vcpu=vm.vcpus?vm.vcpus+' vCPU':'';
+    const li=document.createElement('li');
+    li.innerHTML=`
+      <div class="vm-info">
+        <div class="vm-header"><span class="badge-tpl">Template</span><span class="vm-name">${esc(vm.name)}</span></div>
+        <div class="vm-meta">${mem?`<code>${mem}</code>`:''} ${vcpu?`<code>${vcpu}</code>`:''} <code>${esc(vm.uuid.slice(0,14))}…</code></div>
+        ${vm.desc?`<div style="font-size:.72rem;color:var(--text-muted);margin-top:2px">${esc(vm.desc)}</div>`:''}
+      </div>
+      <div class="vm-actions">
+        <button class="btn btn-primary btn-sm" onclick="openCloneModal('${escJ(vm.ref)}','${escJ(vm.name)}')">${SVG.clone} Clone</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteVM(this,'${escJ(vm.ref)}','${vm.uuid}','${vm.power_state||'Halted'}')">${SVG.trash}</button>
+      </div>`;
+    list.appendChild(li);
+  });
+}
+
+// ── Cloned VMs window ─────────────────────────────────────────────────────────
+function renderClones(){
+  const list=$('cloned-vms');
+  $('clone-count-badge').textContent=`(${allVMs.clones.length})`;
+  if(!allVMs.clones.length){list.innerHTML="<li class='vm-empty'>No cloned VMs found.</li>";return;}
+  list.innerHTML='';
+  allVMs.clones.forEach(vm=>{
+    const isR=vm.power_state==='Running';
+    const li=document.createElement('li');
+    li.innerHTML=`
+      <div class="vm-info">
+        <div class="vm-header"><span class="${psClass(vm.power_state)}">${esc(vm.power_state)}</span><span class="vm-name">${esc(vm.name)}</span><span class="badge-clone">Clone</span></div>
+        <div class="vm-meta">${vm.ip?`<code style="color:var(--success);border-color:var(--success-bd)">${esc(vm.ip)}</code>`:'<code style="color:var(--text-light)">no IP</code>'} <code>${esc(vm.uuid.slice(0,14))}…</code></div>
+      </div>
+      <div class="vm-actions">
+        <button class="btn ${isR?'btn-danger':'btn-success'} btn-sm" onclick="${isR?`vmStop(this,'${escJ(vm.ref)}','${vm.uuid}')`:` vmStart(this,'${escJ(vm.ref)}','${vm.uuid}')`}">${isR?SVG.stop+' Off':SVG.play+' On'}</button>
+        <button class="btn btn-warning btn-sm" ${isR?'':'disabled'} onclick="vmReboot(this,'${escJ(vm.ref)}','${vm.uuid}')">${SVG.reboot}</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteVM(this,'${escJ(vm.ref)}','${vm.uuid}','${vm.power_state}')">${SVG.trash}</button>
+      </div>`;
+    list.appendChild(li);
+  });
+}
+
+// ── VM actions (fetch to backend proxy) ───────────────────────────────────────
+async function vmStart(btn,ref,uuid){
+  btn.disabled=true;btn.textContent='Starting…';
+  try{await fetch(`${LAB44_API}/xapi/vm/start`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vm_ref:ref})});await loadVms();}
+  catch(e){alert(e.message);await loadVms();}
+}
+async function vmStop(btn,ref,uuid){
+  btn.disabled=true;btn.textContent='Stopping…';
+  try{await fetch(`${LAB44_API}/xapi/vm/stop`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vm_ref:ref})});await loadVms();}
+  catch(e){alert(e.message);await loadVms();}
+}
+async function vmReboot(btn,ref,uuid){
+  btn.disabled=true;btn.textContent='Rebooting…';
+  try{await fetch(`${LAB44_API}/xapi/vm/reboot`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vm_ref:ref})});await loadVms();}
+  catch(e){alert(e.message);await loadVms();}
+}
+async function deleteVM(btn,ref,uuid,ps){
+  if(!confirm(`Permanently delete VM ${uuid.slice(0,12)}…?`))return;
+  btn.disabled=true;btn.textContent='Deleting…';
+  try{
+    const res=await fetch(`${LAB44_API}/xapi/vm/delete`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vm_ref:ref,power_state:ps})});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Delete failed');
+    await loadVms();
+  }catch(e){alert(e.message);btn.disabled=false;btn.innerHTML=SVG.trash;}
+}
+
+// ── Clone modal ───────────────────────────────────────────────────────────────
+function openCloneModal(ref,name){
+  showModal(`<h2>Clone Template</h2><p>From: <strong>${esc(name)}</strong></p>
+    <div class="modal-field"><label>Clone Name Prefix</label><input type="text" id="m_prefix" value="student"/></div>
+    <div class="modal-field"><label>Number of Clones</label><input type="number" id="m_count" value="1" min="1" max="50"/></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="m_clone_btn" onclick="doClone('${escJ(ref)}','${escJ(name)}')">${SVG.clone} Clone</button>
+    </div>`);
+}
+async function doClone(ref,baseName){
+  const prefix=$('m_prefix')?.value.trim()||'student';
+  const count=parseInt($('m_count')?.value||'1',10);
+  if(count<1||count>50)return alert('Count must be 1–50.');
+  const btn=$('m_clone_btn');if(btn){btn.disabled=true;btn.innerHTML=`<span class="spinner"></span> Cloning…`;}
+  try{
+    let n=1;while(allVMs.clones.some(v=>v.name===`${prefix} ${n}`))n++;
+    for(let i=0;i<count;i++){
+      const vmName=`${prefix} ${n+i}`;
+      const res=await fetch(`${LAB44_API}/xapi/vm/clone`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({template_ref:ref,vm_name:vmName})});
+      const data=await res.json();
+      if(!res.ok)throw new Error(data.error||'Clone failed');
+    }
+    closeModal();await loadVms();
+    alert(`Created ${count} clone(s): ${prefix} ${n}${count>1?' – '+prefix+' '+(n+count-1):''}`);
+  }catch(e){alert('Clone failed: '+e.message);if(btn){btn.disabled=false;btn.innerHTML=SVG.clone+' Clone';}}
+}
+
+// ── Bulk actions ──────────────────────────────────────────────────────────────
+$('start-all-btn').addEventListener('click',async()=>{
+  if(!allVMs.clones.length)return;
+  if(!confirm(`Start all ${allVMs.clones.length} VMs?`))return;
+  for(const vm of allVMs.clones)try{await fetch(`${LAB44_API}/xapi/vm/start`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vm_ref:vm.ref})});}catch(_){}
+  await loadVms();
+});
+$('stop-all-btn').addEventListener('click',async()=>{
+  if(!allVMs.clones.length)return;
+  if(!confirm(`Stop all ${allVMs.clones.length} VMs?`))return;
+  for(const vm of allVMs.clones)try{await fetch(`${LAB44_API}/xapi/vm/stop`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vm_ref:vm.ref})});}catch(_){}
+  await loadVms();
+});
+$('clear-all-btn').addEventListener('click',async()=>{
+  if(!allVMs.clones.length)return;
+  if(!confirm(`Delete ALL ${allVMs.clones.length} cloned VMs?`))return;
+  for(const vm of allVMs.clones)try{await fetch(`${LAB44_API}/xapi/vm/delete`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vm_ref:vm.ref,power_state:vm.power_state})});}catch(_){}
+  await loadVms();
+});
+$('export-btn').addEventListener('click',()=>{
+  if(!allVMs.clones.length)return;
+  let csv='Name,UUID,Status,IP\n';
+  allVMs.clones.forEach(vm=>{csv+=`"${vm.name}","${vm.uuid}","${vm.power_state}","${vm.ip}"\n`;});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`lab44-clones-${new Date().toISOString().slice(0,10)}.csv`;a.click();
+});
+$('load-vms-btn').addEventListener('click',loadVms);
+
+// ══ REQUESTS ═════════════════════════════════════════════════════════════════
+async function loadAllRequests(){
+  const list=$('req-list');
+  try{
+    const res=await fetch(`${LAB44_API}/vm-requests`);
+    const data=await res.json();
+    const all=data.requests||[];
+    const pending=all.filter(r=>r.status==='pending');
+    const reviewed=all.filter(r=>r.status!=='pending');
+    const banner=$('pending-banner');
+    if(pending.length){$('pending-text').innerHTML=`<strong>${pending.length}</strong> pending VM request${pending.length>1?'s':''} awaiting approval`;banner.style.display='flex';}
+    else banner.style.display='none';
+    if(!all.length){list.innerHTML=`<div style="color:var(--text-light);font-size:.82rem;font-style:italic">No requests yet.</div>`;return;}
+    const pendingHTML=pending.map(r=>`
+      <div class="req-row" id="reqrow-${r.id}">
+        <div style="flex:1;min-width:0">
+          <div class="req-student">${esc(r.student_name)}</div>
+          <div class="req-meta">ID: ${esc(r.student_id)} · ${r.requested_at.split(' ')[0]}</div>
+          ${r.template_name?`<div class="req-template"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/></svg>${esc(r.template_name)}</div>`:'<div style="font-size:.72rem;color:var(--text-light);margin-top:4px">No template selected</div>'}
+        </div>
+        <div class="req-actions">
+          <button class="btn btn-success btn-sm" onclick="openApproveModal(${r.id},'${escJ(r.student_name)}','${escJ(r.template_name||'')}')">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Approve
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="openRejectModal(${r.id},'${escJ(r.student_name)}')">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Reject
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="deleteRequest(${r.id})" title="Remove">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+          </button>
+        </div>
+      </div>`).join('');
+    const histHTML=reviewed.length?`
+      <div style="margin-top:12px">
+        <div class="section-title" style="color:var(--text-light);font-size:.6rem">History (${reviewed.length})</div>
+        ${reviewed.map(r=>{
+          const sc=r.status==='approved'?'var(--success)':'var(--error)';
+          return`<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:5px">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-weight:600;font-size:.82rem">${esc(r.student_name)}</span>
+                <span style="font-size:.72rem;font-weight:600;color:${sc}">${r.status.toUpperCase()}</span>
+                <span style="font-family:var(--mono);font-size:.62rem;color:var(--text-light)">${r.reviewed_at?.split(' ')[0]||''}</span>
+              </div>
+              <div style="font-family:var(--mono);font-size:.63rem;color:var(--text-muted);margin-top:2px">${esc(r.template_name||'—')}${r.vm_ip?` · <span style="color:var(--success)">${esc(r.vm_ip)}</span>`:''}${r.note?` · <em>${esc(r.note)}</em>`:''}</div>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="deleteRequest(${r.id})" title="Remove">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+            </button>
+          </div>`;
+        }).join('')}
+      </div>`:' ';
+    list.innerHTML=(pending.length?pendingHTML:'<div style="color:var(--text-light);font-size:.82rem;font-style:italic;margin-bottom:8px">No pending requests.</div>')+histHTML;
+  }catch(e){list.innerHTML=`<div style="color:var(--error);font-size:.82rem">Could not load: ${esc(e.message)}</div>`;}
+}
+
+function openApproveModal(id,studentName,templateName){
+  showModal(`<h2>Approve VM Request</h2>
+    <p>Clone <strong>${esc(templateName)}</strong> for <strong>${esc(studentName)}</strong>.</p>
+    <div style="margin:12px 0;padding:10px 14px;background:var(--accent-dim);border:1px solid rgba(42,91,215,.18);border-radius:var(--radius-sm);font-size:.78rem;color:var(--accent);line-height:1.55">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;margin-right:5px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      The template will be <strong>cloned automatically</strong> and named after the student. The VM will then <strong>start automatically</strong>. The student's IP will appear once the VM boots.
+    </div>
+    <div class="modal-field"><label>Note to student <span style="font-weight:400;color:var(--text-light)">(optional)</span></label><textarea id="m_note" placeholder="e.g. Your VM is ready." style="min-height:56px"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-success" id="m_approve_btn" onclick="submitApprove(${id},'${escJ(studentName)}')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Clone &amp; Start
+      </button>
+    </div>`);
+}
+async function submitApprove(id,studentName){
+  const note=$('m_note')?.value||'';
+  const btn=$('m_approve_btn');
+  if(btn){btn.disabled=true;btn.innerHTML=`<span class="spinner"></span> Cloning &amp; Starting…`;}
+  try{
+    const res=await fetch(`${LAB44_API}/vm-requests/${id}`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({status:'approved',note:note||null})
+    });
+    const data=await res.json();
+    if(!res.ok){
+      alert('Error: '+(data.error||'Clone/start failed'));
+      if(btn){btn.disabled=false;btn.innerHTML='Clone &amp; Start';}
+      return;
+    }
+    closeModal();
+    await loadAllRequests();
+    await loadAssignments();
+    await loadVms(); // Refresh cloned VMs window so new clone appears
+    alert(`✓ VM cloned and started for ${studentName}!\nThe student will see the IP once the VM finishes booting.`);
+  }catch(e){alert('Failed: '+e.message);if(btn){btn.disabled=false;btn.innerHTML='Clone &amp; Start';}}
+}
+
+function openRejectModal(id,studentName){
+  showModal(`<h2>Reject VM Request</h2><p>For <strong>${esc(studentName)}</strong></p>
+    <div class="modal-field"><label>Reason <span style="font-weight:400;color:var(--text-light)">(shown to student)</span></label><textarea id="m_rej_note" placeholder="Optional reason…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="submitReject(${id},'${escJ(studentName)}')">Reject</button>
+    </div>`);
+}
+async function submitReject(id,studentName){
+  const note=$('m_rej_note')?.value||'';
+  try{await fetch(`${LAB44_API}/vm-requests/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'rejected',note:note||null})});closeModal();await loadAllRequests();}
+  catch(e){alert('Failed: '+e.message);}
+}
+
+async function deleteRequest(id){
+  try{await fetch(`${LAB44_API}/vm-requests/${id}`,{method:'DELETE'});await loadAllRequests();}
+  catch(e){alert('Failed: '+e.message);}
+}
+async function clearHistory(all){
+  if(!confirm(all?'Delete ALL requests (including pending)?':'Delete reviewed history (approved/rejected)?'))return;
+  try{await fetch(`${LAB44_API}/vm-requests${all?'?all=true':''}`,{method:'DELETE'});await loadAllRequests();}
+  catch(e){alert('Failed: '+e.message);}
+}
+
+// ── Student Assignments table ─────────────────────────────────────────────────
+async function loadAssignments(){
+  const tbody=$('assign-body');
+  try{
+    const res=await fetch(`${LAB44_API}/vm-assignments`);
+    const data=await res.json();
+    const rows=data.assignments||[];
+    if(!rows.length){tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--text-light);font-style:italic">No approved VMs yet.</td></tr>`;return;}
+    tbody.innerHTML=rows.map(r=>{
+      const ip = r.live_ip || r.vm_ip || '';
+      const ps = r.live_power_state || 'Unknown';
+      const sshUrl = ip ? guacURL('ssh', ip) : null;
+      const rdpUrl = ip ? guacURL('rdp', ip) : null;
+      let ipCell;
+      if(ip){
+        ipCell=`<span class="ip-chip">${esc(ip)}</span>`;
+      }else if(ps==='Running'){
+        ipCell=`<span style="display:inline-flex;align-items:center;gap:5px;font-size:.72rem;color:var(--warning);animation:pulse 1.5s infinite">
+          <svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="currentColor"/></svg>Fetching…</span>`;
+      }else{
+        ipCell=`<span style="color:var(--text-light);font-size:.75rem">—</span>`;
+      }
+      const guacBtns=ip
+        ?`<div style="display:flex;gap:4px">
+            <a href="${sshUrl}" target="_blank" class="guac-btn guac-ssh">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg> SSH
+            </a>
+            <a href="${rdpUrl}" target="_blank" class="guac-btn guac-rdp">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> RDP
+            </a>
+          </div>`
+        :`<span style="font-size:.72rem;color:var(--text-light)">No IP</span>`;
+      return`<tr>
+        <td style="font-weight:500">${esc((r.first_name||'')+' '+(r.last_name||r.student_name||''))}<br><span style="font-family:var(--mono);font-size:.63rem;color:var(--text-muted)">${esc(r.student_id)}</span></td>
+        <td>${esc(r.vm_name||r.template_name||'—')}</td>
+        <td>${ipCell}</td>
+        <td><span class="${psClass(ps)}">${esc(ps)}</span></td>
+        <td>${guacBtns}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteRequest(${r.id})" title="Remove">${SVG.trash}</button></td>
+      </tr>`;
+    }).join('');
+  }catch(e){tbody.innerHTML=`<tr><td colspan="6" style="color:var(--error);padding:12px;font-size:.82rem">Could not load: ${esc(e.message)}</td></tr>`;}
+}
+
+function init(){
+  loadVms();
+  loadAllRequests();
+  loadAssignments();
+  setInterval(loadAllRequests,30000);
+  setInterval(loadAssignments,15000); // Poll every 15s — picks up new VM IPs after clone+boot
+}
+</script>
+
+const esc  = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const escJ = s => String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"');
+const $    = id => document.getElementById(id);
+function psClass(ps){ return ps==='Running'?'ps-running':ps==='Halted'?'ps-halted':'ps-other'; }
+
+function guacURL(protocol, host) {
+  if(!GUAC_URL||!host) return null;
+  const port = protocol==='rdp'?'3389':'22';
+  return `${GUAC_URL.replace(/\/$/,'')}/#/client/${btoa(`${protocol}://admin:000000@${host}:${port}/?security=any&ignore-cert=true`)}`;
+}
+function showModal(html){ $('modal-inner').innerHTML=html; $('modal-wrap').style.display='block'; }
+function closeModal(){ $('modal-wrap').style.display='none'; }
+
+const SVG={
+  play:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
+  stop:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`,
+  reboot:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`,
+  clone:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+  trash:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`
+};
+
+</script>
+</body>
+</html>

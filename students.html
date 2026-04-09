@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>(function(){if(sessionStorage.getItem('lab44_role')!=='admin')window.location.replace('admin.html')})()</script>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Lab44 — Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#f2f3f5;--surface:#fff;--surface2:#f7f8fa;
+  --border:#d8dce3;--border-hi:#b8bec9;
+  --text:#1c2128;--text-muted:#5a6272;--text-light:#9099a8;
+  --accent:#2a5bd7;--accent-dim:rgba(42,91,215,.08);--accent-hover:#1e4ec2;
+  --success:#2e7d4f;--success-bg:#f0f7f3;--success-bd:#b6d9c5;
+  --error:#b91c1c;--error-bg:#fdf2f2;--error-bd:#f9c9c9;
+  --warn:#92400e;--warn-bg:#fffbeb;--warn-bd:#fcd34d;
+  --mono:"IBM Plex Mono",monospace;--sans:"IBM Plex Sans",sans-serif;
+  --radius:8px;--radius-sm:5px;
+  --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.07);
+  --tr:0.15s ease
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Topbar ── */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.logo{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.65rem;color:#fff;font-weight:500}
+.topbar-title{font-weight:600;font-size:.9rem}
+.topbar-sep{color:var(--border-hi)}
+.topbar-page{font-size:.8rem;color:var(--text-muted)}
+.topbar-right{display:flex;gap:8px;align-items:center}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius-sm);font-family:var(--sans);font-size:.8rem;font-weight:500;cursor:pointer;border:none;transition:all var(--tr);white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 1px 3px rgba(42,91,215,.2)}
+.btn-primary:hover:not(:disabled){background:var(--accent-hover);transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-ghost{background:transparent;color:var(--text-muted);border:1px solid var(--border)}
+.btn-ghost:hover:not(:disabled){border-color:var(--border-hi);color:var(--text);background:var(--surface2)}
+.btn-danger{background:transparent;color:var(--error);border:1px solid rgba(185,28,28,.2)}
+.btn-danger:hover:not(:disabled){background:var(--error-bg);border-color:rgba(185,28,28,.4)}
+.btn-success{background:var(--success);color:#fff;border:none}
+.btn-success:hover:not(:disabled){background:#24633e;transform:translateY(-1px)}
+.btn-sm{padding:4px 10px;font-size:.72rem}
+.btn-xs{padding:3px 7px;font-size:.67rem}
+
+/* ── Flash ── */
+.flash{padding:10px 14px;border-radius:var(--radius-sm);font-size:.8rem;display:flex;align-items:center;gap:8px;margin-bottom:18px;animation:fadeIn .2s ease}
+.flash-success{background:var(--success-bg);border:1px solid var(--success-bd);color:var(--success)}
+.flash-error{background:var(--error-bg);border:1px solid var(--error-bd);color:var(--error)}
+.flash-warn{background:var(--warn-bg);border:1px solid var(--warn-bd);color:var(--warn)}
+.flash-close{margin-left:auto;background:none;border:none;cursor:pointer;color:inherit;opacity:.6;padding:0;display:flex}
+.flash-close:hover{opacity:1}
+
+/* ── Main ── */
+.main{flex:1;padding:24px 28px;max-width:1400px;margin:0 auto;width:100%}
+
+/* ── Settings card ── */
+.settings-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 24px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.settings-left h3{font-size:.88rem;font-weight:600;margin-bottom:3px}
+.settings-left p{font-size:.78rem;color:var(--text-muted)}
+.settings-left code{font-size:.73rem;background:var(--surface2);padding:1px 5px;border-radius:3px;border:1px solid var(--border)}
+.toggle-wrap{display:flex;align-items:center;gap:10px}
+.toggle-label{font-size:.8rem;font-weight:500;color:var(--text-muted)}
+.toggle{position:relative;width:42px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:var(--border-hi);border-radius:99px;cursor:pointer;transition:background .2s}
+.toggle input:checked+.toggle-track{background:var(--success)}
+.toggle-thumb{position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .2s;pointer-events:none}
+.toggle input:checked~.toggle-thumb{transform:translateX(18px)}
+.toggle-status{font-family:var(--mono);font-size:.68rem;padding:2px 8px;border-radius:99px;font-weight:500}
+.toggle-status.on{background:var(--success-bg);color:var(--success);border:1px solid var(--success-bd)}
+.toggle-status.off{background:var(--error-bg);color:var(--error);border:1px solid var(--error-bd)}
+
+/* ── Stats ── */
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:20px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px}
+.stat-label{font-family:var(--mono);font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-light);margin-bottom:5px}
+.stat-value{font-size:1.3rem;font-weight:600;color:var(--text)}
+.stat-value.blue{color:var(--accent)}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--surface2);padding:5px;border-radius:var(--radius);border:1px solid var(--border);width:fit-content}
+.tab{display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:6px;font-family:var(--sans);font-size:.82rem;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-muted);transition:all var(--tr);position:relative;white-space:nowrap}
+.tab:hover{color:var(--text);background:rgba(0,0,0,.04)}
+.tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.1),0 0 0 1px var(--border)}
+.tab-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;background:var(--error);color:#fff;border-radius:99px;font-size:.6rem;font-weight:700;font-family:var(--mono)}
+
+/* ── Toolbar ── */
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.toolbar-left,.toolbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.search{padding:7px 11px;font-family:var(--sans);font-size:.82rem;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;width:210px;transition:all var(--tr)}
+.search:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+
+/* ── Table ── */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+thead tr{background:var(--surface2);border-bottom:2px solid var(--border)}
+thead th{padding:11px 14px;text-align:left;white-space:nowrap;font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-light);font-weight:500;cursor:pointer;user-select:none}
+thead th:hover{color:var(--text-muted)}
+thead th.sorted{color:var(--accent)}
+tbody tr{border-bottom:1px solid var(--border);transition:background var(--tr)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--surface2)}
+tbody tr.editing{background:#fffef0}
+td{padding:10px 14px;vertical-align:middle}
+.td-name{font-weight:500}
+.td-id{font-family:var(--mono);font-size:.75rem;color:var(--text-muted)}
+.td-date{font-family:var(--mono);font-size:.7rem;color:var(--text-light)}
+.td-actions{display:flex;gap:5px;justify-content:flex-end}
+.grade-input{width:62px;padding:4px 7px;font-family:var(--mono);font-size:.78rem;text-align:center;border:1px solid transparent;border-radius:4px;background:transparent;color:var(--text);transition:all var(--tr)}
+.grade-input:hover{border-color:var(--border);background:var(--surface2)}
+.grade-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim);background:var(--surface);outline:none}
+.grade-green{color:var(--success);font-weight:500}
+.grade-orange{color:var(--warn);font-weight:500}
+.grade-red{color:var(--error);font-weight:500}
+.mean-cell{font-weight:600;font-family:var(--mono);font-size:.78rem}
+.edit-input{padding:5px 9px;font-family:var(--sans);font-size:.82rem;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;transition:all var(--tr)}
+.edit-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim)}
+.col-header{display:flex;align-items:center;gap:5px}
+.col-actions{display:flex;gap:2px;opacity:0;transition:opacity .15s}
+th:hover .col-actions{opacity:1}
+.col-btn{background:none;border:none;cursor:pointer;color:var(--text-light);padding:2px;display:flex;border-radius:3px;transition:all .12s}
+.col-btn:hover{color:var(--text-muted);background:var(--border)}
+.col-btn.del:hover{color:var(--error);background:var(--error-bg)}
+.empty-row td{text-align:center;padding:36px;color:var(--text-light);font-style:italic;font-size:.83rem}
+
+/* ── VM Requests table ── */
+.req-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;font-size:.67rem;font-family:var(--mono);font-weight:600;letter-spacing:.03em}
+.req-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.req-pending{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-bd)}
+.req-pending .req-dot{background:var(--warn)}
+.req-approved{background:var(--success-bg);color:var(--success);border:1px solid var(--success-bd)}
+.req-approved .req-dot{background:var(--success)}
+.req-rejected{background:var(--error-bg);color:var(--error);border:1px solid var(--error-bd)}
+.req-rejected .req-dot{background:var(--error)}
+
+/* ── VM filter select ── */
+.filter-select{padding:7px 11px;font-family:var(--sans);font-size:.82rem;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;cursor:pointer;transition:all var(--tr)}
+.filter-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+
+/* ── VM info chip ── */
+.vm-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;background:var(--accent-dim);border:1px solid rgba(42,91,215,.15);border-radius:4px;font-family:var(--mono);font-size:.67rem;color:var(--accent)}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .15s ease}
+.modal{background:var(--surface);border-radius:var(--radius);box-shadow:0 8px 40px rgba(0,0,0,.18);padding:28px;width:100%;max-width:380px;animation:slideUp .2s ease}
+.modal h2{font-size:1rem;font-weight:600;margin-bottom:6px}
+.modal p{font-size:.83rem;color:var(--text-muted);margin-bottom:20px;line-height:1.5}
+.modal-field{margin-bottom:14px}
+.modal-field label{display:block;font-size:.8rem;font-weight:500;margin-bottom:6px}
+.modal-field input,.modal-field textarea{width:100%;padding:9px 12px;font-family:var(--sans);font-size:.875rem;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;transition:all var(--tr)}
+.modal-field textarea{resize:vertical;min-height:72px}
+.modal-field input:focus,.modal-field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.modal-err{font-size:.73rem;color:var(--error);margin-top:5px;display:none}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,0,0,.1);border-top-color:currentColor;border-radius:50%;animation:spin .65s linear infinite}
+
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="topbar-left">
+    <div class="logo">L44</div>
+    <span class="topbar-title">Lab44</span>
+    <span class="topbar-sep">/</span>
+    <span class="topbar-page">Admin Panel</span>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-sm" onclick="window.location.href='adminmonitoring.html'" style="background:var(--accent);color:#fff;border:none;box-shadow:0 1px 3px rgba(42,91,215,.25);">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      VM Monitor
+    </button>
+    <button class="btn btn-ghost btn-sm" onclick="logout()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Logout
+    </button>
+  </div>
+</nav>
+
+<main class="main">
+  <div id="flash"></div>
+
+  <!-- ── Settings bar ── -->
+  <div class="settings-card">
+    <div class="settings-left">
+      <h3>Student Registration</h3>
+      <p>Allow students to self-register via <code>register.html</code></p>
+    </div>
+    <div class="toggle-wrap">
+      <span id="signup-status" class="toggle-status off">OFF</span>
+      <label class="toggle">
+        <input type="checkbox" id="signup-toggle" onchange="toggleSignup(this.checked)"/>
+        <span class="toggle-track"></span>
+        <span class="toggle-thumb"></span>
+      </label>
+      <span class="toggle-label" id="signup-label">Disabled</span>
+    </div>
+  </div>
+
+  <!-- ── Tabs ── -->
+  <div class="tabs">
+    <button class="tab active" id="tab-students" onclick="switchTab('students')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Students &amp; Grades
+    </button>
+    <button class="tab" id="tab-vms" onclick="switchTab('vms')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      VM Requests
+      <span class="tab-badge" id="pending-badge" style="display:none">0</span>
+    </button>
+  </div>
+
+  <!-- ══════════════════════ STUDENTS TAB ══════════════════════ -->
+  <div id="students-tab">
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Students</div><div class="stat-value" id="s-total">—</div></div>
+      <div class="stat"><div class="stat-label">Columns</div><div class="stat-value blue" id="s-cols">—</div></div>
+      <div class="stat"><div class="stat-label">Class Mean</div><div class="stat-value" id="s-mean">—</div></div>
+      <div class="stat"><div class="stat-label">Passing ≥10</div><div class="stat-value" id="s-pass">—</div></div>
+    </div>
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <input class="search" type="text" id="search" placeholder="Search students…" oninput="renderTable()"/>
+      </div>
+      <div class="toolbar-right">
+        <button class="btn btn-ghost btn-sm" onclick="showAddColModal()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Column
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="showAddStudentModal()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          Add Student
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="exportCSV()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ VM REQUESTS TAB ══════════════════════ -->
+  <div id="vms-tab" style="display:none">
+    <div class="toolbar" style="margin-bottom:14px">
+      <div class="toolbar-left">
+        <select id="req-filter" class="filter-select" onchange="renderRequests()">
+          <option value="all">All requests</option>
+          <option value="pending">Pending only</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <div class="toolbar-right">
+        <button class="btn btn-ghost btn-sm" onclick="loadRequests()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Student ID</th>
+              <th>VM Name</th>
+              <th>Requested</th>
+              <th>Status</th>
+              <th style="text-align:right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="req-tbody">
+            <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-light);font-style:italic;font-size:.83rem;">Loading requests…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div id="modal-overlay" style="display:none"></div>
+
+<script>
+const _configBase = window.location.origin;
+let API = _configBase + '/api';
+async function _loadConfig() {
+  try { const r=await fetch(_configBase+'/api/config'); const c=await r.json(); API=c.admin_api+'/api'; } catch(_) {}
+}
+let students=[], columns=[], gradeMap={}, editingId=null, sortCol='last_name', sortDir=1, signupEnabled=false;
+const gradeTimers={};
+const esc = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+(async function(){ await _loadConfig(); await loadSettings(); await loadData(); })();
+
+function flash(msg, t='success') {
+  const el = document.getElementById('flash');
+  el.innerHTML = `<div class="flash flash-${t}">${esc(msg)}<button class="flash-close" onclick="this.parentElement.remove()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>`;
+  setTimeout(() => { const f = el.querySelector('.flash'); if(f) f.remove(); }, 5000);
+}
+
+/* ── Settings ── */
+async function loadSettings() {
+  try {
+    const res = await fetch(`${API}/settings`);
+    const d   = await res.json();
+    signupEnabled = d.signup_enabled === 'true';
+    updateSignupUI();
+  } catch(_) {}
+}
+function updateSignupUI() {
+  document.getElementById('signup-toggle').checked = signupEnabled;
+  const st = document.getElementById('signup-status');
+  const lb = document.getElementById('signup-label');
+  if (signupEnabled) { st.textContent='ON'; st.className='toggle-status on'; lb.textContent='Enabled'; }
+  else               { st.textContent='OFF'; st.className='toggle-status off'; lb.textContent='Disabled'; }
+}
+async function toggleSignup(v) {
+  signupEnabled = v; updateSignupUI();
+  try {
+    await fetch(`${API}/settings`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({key:'signup_enabled',value:String(v)}) });
+    flash(`Student registration ${v?'enabled':'disabled'}.`);
+  } catch { flash('Failed to update setting.', 'error'); }
+}
+
+/* ── Data ── */
+async function loadData() {
+  try {
+    const res = await fetch(`${API}/data`);
+    const d   = await res.json();
+    students  = d.students; columns = d.columns; gradeMap = {};
+    d.grades.forEach(g => { if(!gradeMap[g.student_id]) gradeMap[g.student_id]={}; gradeMap[g.student_id][g.column_id]=g.value; });
+    updateStats(); renderTable();
+  } catch { flash('Failed to load data.', 'error'); }
+}
+
+function calcMean(sid) {
+  const vals = columns.map(c => gradeMap[sid]?.[c.id]).filter(v => v !== null && v !== undefined);
+  if (!vals.length) return null;
+  return parseFloat((vals.reduce((a,b) => a+b, 0) / vals.length).toFixed(2));
+}
+function gradeClass(v) {
+  if (v===null||v===undefined||v==='') return '';
+  const n = parseFloat(v);
+  if (n>=12) return 'grade-green'; if (n>=8) return 'grade-orange'; return 'grade-red';
+}
+function updateStats() {
+  document.getElementById('s-total').textContent = students.length;
+  document.getElementById('s-cols').textContent  = columns.length;
+  const means = students.map(s => calcMean(s.id)).filter(v => v !== null);
+  document.getElementById('s-mean').textContent = means.length ? (means.reduce((a,b)=>a+b,0)/means.length).toFixed(1) : '—';
+  document.getElementById('s-pass').textContent = means.length ? means.filter(m=>m>=10).length : '—';
+}
+function sortBy(col) { if(sortCol===col) sortDir*=-1; else { sortCol=col; sortDir=1; } renderTable(); }
+
+function renderTable() {
+  const q = (document.getElementById('search').value||'').toLowerCase();
+  let rows = students.filter(s => (s.first_name+' '+s.last_name+' '+s.student_id).toLowerCase().includes(q));
+  rows.sort((a,b) => {
+    let av, bv;
+    if (sortCol==='mean') { av=calcMean(a.id)??-Infinity; bv=calcMean(b.id)??-Infinity; }
+    else { av=(a[sortCol]||'').toLowerCase(); bv=(b[sortCol]||'').toLowerCase(); }
+    return av<bv ? -sortDir : av>bv ? sortDir : 0;
+  });
+  renderHead(); renderBody(rows);
+}
+
+const PENCIL='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+const TRASH='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+const arr = s => sortCol===s ? (sortDir===1?' ↑':' ↓') : '';
+
+function renderHead() {
+  document.getElementById('thead').innerHTML = `<tr>
+    <th onclick="sortBy('last_name')" class="${sortCol==='last_name'?'sorted':''}">Student${arr('last_name')}</th>
+    <th onclick="sortBy('student_id')" class="${sortCol==='student_id'?'sorted':''}">ID${arr('student_id')}</th>
+    <th onclick="sortBy('created_at')" class="${sortCol==='created_at'?'sorted':''}">Registered${arr('created_at')}</th>
+    ${columns.map(c=>`<th><div class="col-header"><span onclick="sortBy('col_${c.id}')">${esc(c.name)}</span>
+      <div class="col-actions">
+        <button class="col-btn" title="Rename" onclick="showRenameColModal(${c.id},'${esc(c.name)}')">${PENCIL}</button>
+        <button class="col-btn del" title="Delete" onclick="deleteColumn(${c.id},'${esc(c.name)}')">${TRASH}</button>
+      </div></div></th>`).join('')}
+    <th onclick="sortBy('mean')" class="${sortCol==='mean'?'sorted':''}">Mean${arr('mean')}</th>
+    <th>Actions</th>
+  </tr>`;
+}
+
+function renderBody(rows) {
+  const tbody = document.getElementById('tbody');
+  if (!rows.length) { tbody.innerHTML=`<tr class="empty-row"><td colspan="${4+columns.length+1}">No students found.</td></tr>`; return; }
+  tbody.innerHTML = rows.map(s => {
+    if (editingId===s.id) return renderEditRow(s);
+    const mean = calcMean(s.id); const mc = mean!==null ? gradeClass(mean) : '';
+    return `<tr data-id="${s.id}">
+      <td class="td-name">${esc(s.last_name)}, ${esc(s.first_name)}</td>
+      <td class="td-id">${esc(s.student_id)}</td>
+      <td class="td-date">${s.created_at ? s.created_at.split(' ')[0] : ''}</td>
+      ${columns.map(c => { const v=gradeMap[s.id]?.[c.id]; const gc=gradeClass(v);
+        return `<td><input type="number" class="grade-input ${gc}" min="0" max="20" step="0.5" value="${v!==null&&v!==undefined?v:''}"
+          onchange="saveGrade(${s.id},${c.id},this.value,this)" oninput="this.className='grade-input '+gradeClass(this.value)"/></td>`}).join('')}
+      <td class="mean-cell ${mc}">${mean!==null?mean:'—'}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-ghost btn-xs" onclick="startEdit(${s.id})">${PENCIL} Edit</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteStudent(${s.id},'${esc(s.first_name+' '+s.last_name)}')">${TRASH}</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderEditRow(s) {
+  return `<tr class="editing" data-id="${s.id}">
+    <td><input class="edit-input" id="e_fn" value="${esc(s.first_name)}" placeholder="First" style="width:90px;margin-right:4px"/>
+        <input class="edit-input" id="e_ln" value="${esc(s.last_name)}" placeholder="Last" style="width:90px"/></td>
+    <td><input class="edit-input" id="e_sid" value="${esc(s.student_id)}" placeholder="ID" style="width:90px"/></td>
+    <td class="td-date">${s.created_at ? s.created_at.split(' ')[0] : ''}</td>
+    ${columns.map(c => { const v=gradeMap[s.id]?.[c.id]; const gc=gradeClass(v);
+      return `<td><input type="number" class="grade-input ${gc}" min="0" max="20" step="0.5" value="${v!==null&&v!==undefined?v:''}"
+        onchange="saveGrade(${s.id},${c.id},this.value,this)" oninput="this.className='grade-input '+gradeClass(this.value)"/></td>`}).join('')}
+    <td>—</td>
+    <td><div style="display:flex;gap:5px">
+      <button class="btn btn-primary btn-xs" onclick="saveEdit(${s.id})">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Save
+      </button>
+      <button class="btn btn-ghost btn-xs" onclick="cancelEdit()">Cancel</button>
+    </div></td>
+  </tr>`;
+}
+
+function startEdit(id)  { editingId=id; renderTable(); }
+function cancelEdit()   { editingId=null; renderTable(); }
+async function saveEdit(id) {
+  const fn=document.getElementById('e_fn').value.trim(), ln=document.getElementById('e_ln').value.trim(), sid=document.getElementById('e_sid').value.trim();
+  if(!fn||!ln||!sid) { flash('All fields required.','error'); return; }
+  try {
+    const res = await fetch(`${API}/students/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({first_name:fn,last_name:ln,student_id:sid})});
+    const d = await res.json();
+    if (!res.ok) { flash(d.error||'Update failed.','error'); return; }
+    flash('Student updated.'); editingId=null; await loadData();
+  } catch { flash('Server error.','error'); }
+}
+async function deleteStudent(id, name) {
+  if (!confirm(`Delete student "${name}"? This also removes all their grades.`)) return;
+  try { await fetch(`${API}/students/${id}`,{method:'DELETE'}); flash(`${name} removed.`); await loadData(); }
+  catch { flash('Delete failed.','error'); }
+}
+async function saveGrade(sid, cid, val, input) {
+  clearTimeout(gradeTimers[`${sid}-${cid}`]);
+  gradeTimers[`${sid}-${cid}`] = setTimeout(async () => {
+    const v = val==='' ? null : parseFloat(val);
+    if (!gradeMap[sid]) gradeMap[sid]={};
+    gradeMap[sid][cid] = v;
+    const tr = document.querySelector(`tr[data-id="${sid}"]`);
+    if (tr) { const mean=calcMean(sid); const mc=mean!==null?gradeClass(mean):''; const mtd=tr.querySelector('.mean-cell'); if(mtd){mtd.textContent=mean!==null?mean:'—';mtd.className=`mean-cell ${mc}`;} }
+    updateStats();
+    try { await fetch(`${API}/grades`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:sid,column_id:cid,value:v})}); }
+    catch { flash('Failed to save grade.','error'); }
+  }, 500);
+}
+async function deleteColumn(id, name) {
+  if (!confirm(`Delete column "${name}" and all its grades?`)) return;
+  try { await fetch(`${API}/columns/${id}`,{method:'DELETE'}); flash(`Column "${name}" deleted.`); await loadData(); }
+  catch { flash('Delete failed.','error'); }
+}
+function logout() { sessionStorage.removeItem('lab44_role'); window.location.href='admin.html'; }
+function exportCSV() {
+  let csv = ['Last Name','First Name','Student ID',...columns.map(c=>c.name),'Mean'].join(',')+'\n';
+  students.forEach(s => {
+    const grades = columns.map(c => { const v=gradeMap[s.id]?.[c.id]; return v!==null&&v!==undefined?v:''; });
+    csv += [s.last_name,s.first_name,s.student_id,...grades,calcMean(s.id)??''].map(v=>`"${v}"`).join(',')+'\n';
+  });
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`lab44-grades-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+}
+
+/* ── Tab switching ── */
+let currentTab = 'students';
+let vmRequests = [];
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-students').classList.toggle('active', tab==='students');
+  document.getElementById('tab-vms').classList.toggle('active',      tab==='vms');
+  document.getElementById('students-tab').style.display = tab==='students' ? '' : 'none';
+  document.getElementById('vms-tab').style.display      = tab==='vms'      ? '' : 'none';
+  if (tab==='vms') loadRequests();
+}
+
+/* ── VM Requests ── */
+async function loadRequests() {
+  document.getElementById('req-tbody').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-light);font-style:italic;font-size:.83rem;">Loading…</td></tr>`;
+  try {
+    const res  = await fetch(`${API}/vm-requests`);
+    const data = await res.json();
+    vmRequests = data.requests || [];
+    const pending = vmRequests.filter(r => r.status==='pending').length;
+    const badge   = document.getElementById('pending-badge');
+    if (pending>0) { badge.textContent=pending; badge.style.display=''; }
+    else badge.style.display = 'none';
+    renderRequests();
+  } catch {
+    document.getElementById('req-tbody').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--error);font-size:.83rem;">Failed to load requests.</td></tr>`;
+  }
+}
+
+function renderRequests() {
+  const filter = document.getElementById('req-filter').value;
+  const rows   = vmRequests.filter(r => filter==='all' || r.status===filter);
+  const tbody  = document.getElementById('req-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-light);font-style:italic;font-size:.83rem;">No ${filter==='all'?'':filter+' '}requests found.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const isPending = r.status === 'pending';
+    const badgeCls  = r.status==='pending' ? 'req-pending' : r.status==='approved' ? 'req-approved' : 'req-rejected';
+    const vmName    = r.vm_name || (`lab44-${r.student_name.toLowerCase().replace(/\s+/g,'-')}-${r.student_id}`);
+    const vmUuid    = r.vm_uuid || '';
+    return `<tr>
+      <td style="font-weight:500">${esc(r.student_name)}</td>
+      <td class="td-id">${esc(r.student_id)}</td>
+      <td>${r.vm_name ? `<span class="vm-chip">${esc(r.vm_name)}</span>` : `<span style="color:var(--text-light);font-size:.75rem">—</span>`}</td>
+      <td class="td-date">${r.requested_at.split(' ')[0]}</td>
+      <td><span class="req-badge ${badgeCls}"><span class="req-dot"></span>${r.status.charAt(0).toUpperCase()+r.status.slice(1)}</span></td>
+      <td>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+          ${isPending ? `
+            <button class="btn btn-success btn-sm" onclick="reviewRequest(${r.id},'approved','${esc(r.student_name)}','${esc(vmName)}')">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Approve &amp; Clone VM
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="reviewRequest(${r.id},'rejected','${esc(r.student_name)}','')">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Reject
+            </button>` : ''}
+          ${r.status==='approved' ? `
+            <button class="btn btn-ghost btn-sm" onclick="window.location.href='adminmonitoring.html?student=${encodeURIComponent(vmName)}'" title="Open VM dashboard">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              Open VM
+            </button>` : ''}
+          ${!isPending ? `<span style="font-size:.72rem;color:var(--text-light)">${r.reviewed_at ? r.reviewed_at.split(' ')[0] : ''}</span>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function reviewRequest(id, status, studentName, vmName) {
+  if (status === 'rejected') {
+    showModal(`<div class="modal">
+      <h2>Reject VM Request</h2>
+      <p>Rejecting request for <strong>${esc(studentName)}</strong> — VM: <em>${esc(vmName)}</em></p>
+      <div class="modal-field"><label>Reason (shown to student)</label><textarea id="m_rej_note" placeholder="Optional reason…"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="submitReject(${id},'${esc(studentName)}')">Reject</button>
+      </div>
+    </div>`);
+  } else {
+    showModal(`<div class="modal">
+      <h2>Approve VM Request</h2>
+      <p>Approving VM <strong>${esc(vmName)}</strong> for <strong>${esc(studentName)}</strong>.</p>
+      <div class="modal-field">
+        <label>VM IP Address <span style="font-weight:400;color:var(--text-light)">(for Guacamole quick-access)</span></label>
+        <input type="text" id="m_vm_ip" placeholder="e.g. 192.168.100.55" autocomplete="off"/>
+      </div>
+      <div class="modal-field">
+        <label>Access Protocol</label>
+        <select id="m_proto" style="width:100%;padding:9px 12px;font-family:var(--sans);font-size:.875rem;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none">
+          <option value="ssh">SSH only</option>
+          <option value="rdp">RDP only</option>
+          <option value="both">SSH + RDP</option>
+        </select>
+      </div>
+      <div class="modal-field"><label>Note to student</label><textarea id="m_app_note" placeholder="Optional message…" style="min-height:56px"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-success" id="m_approve_btn" onclick="submitApprove(${id},'${esc(studentName)}','${esc(vmName)}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Approve
+        </button>
+      </div>
+    </div>`);
+  }
+}
+
+async function submitReject(id, studentName) {
+  const note = document.getElementById('m_rej_note')?.value || '';
+  try {
+    await fetch(`${API}/vm-requests/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:'rejected', note:note||null}) });
+    flash(`Request rejected for ${studentName}.`, 'error');
+    closeModal();
+    await loadRequests();
+  } catch { flash('Failed to reject request.', 'error'); }
+}
+
+async function submitApprove(id, studentName, vmName) {
+  const vm_ip = document.getElementById('m_vm_ip')?.value.trim() || '';
+  const access_protocol = document.getElementById('m_proto')?.value || 'ssh';
+  const note  = document.getElementById('m_app_note')?.value || '';
+  const btn   = document.getElementById('m_approve_btn');
+  if (btn) { btn.disabled=true; btn.innerHTML='<span class="spin"></span> Approving…'; }
+  try {
+    const res  = await fetch(`${API}/vm-requests/${id}`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ status:'approved', note:note||null, vm_ip:vm_ip||null, access_protocol })
+    });
+    const data = await res.json();
+    if (res.status === 207 && data.warning) {
+      flash(data.warning, 'warn');
+    } else if (res.ok) {
+      flash(`VM "${data.vmName || vmName}" approved for ${studentName}!`);
+    } else {
+      flash(data.error || 'Approval failed.', 'error');
+      if (btn) { btn.disabled=false; btn.innerHTML='Approve'; }
+      return;
+    }
+    closeModal();
+    await loadRequests();
+  } catch { flash('Failed to approve request.', 'error'); if (btn) { btn.disabled=false; btn.innerHTML='Approve'; } }
+}
+
+// Poll for new pending requests every 30 s
+setInterval(async () => {
+  try {
+    const res  = await fetch(`${API}/vm-requests`);
+    const data = await res.json();
+    const pending = (data.requests||[]).filter(r => r.status==='pending').length;
+    const badge   = document.getElementById('pending-badge');
+    if (pending>0) { badge.textContent=pending; badge.style.display=''; }
+    else badge.style.display = 'none';
+    if (currentTab==='vms') { vmRequests=data.requests||[]; renderRequests(); }
+  } catch(_) {}
+}, 30000);
+
+/* ── Modals ── */
+function showModal(html) {
+  const ov = document.getElementById('modal-overlay');
+  ov.style.display = 'flex';
+  ov.innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()">${html}</div>`;
+}
+function closeModal() { document.getElementById('modal-overlay').style.display='none'; }
+
+function showAddStudentModal() {
+  showModal(`<div class="modal">
+    <h2>Add Student</h2><p>Enter the student's details.</p>
+    <div class="modal-field"><label>First Name *</label><input type="text" id="m_fn" placeholder="Ahmed" autocomplete="off"/><div class="modal-err" id="m_fn_e"></div></div>
+    <div class="modal-field"><label>Last Name *</label><input type="text" id="m_ln" placeholder="Benali" autocomplete="off"/><div class="modal-err" id="m_ln_e"></div></div>
+    <div class="modal-field"><label>Student ID *</label><input type="text" id="m_sid" placeholder="2024001" autocomplete="off"/><div class="modal-err" id="m_sid_e"></div></div>
+    <div id="m_alert" style="font-size:.82rem;color:var(--error);margin-top:8px;display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="submitAddStudent()" id="m_btn">Add Student</button>
+    </div>
+  </div>`);
+  document.getElementById('m_fn').focus();
+  document.getElementById('m_fn').onkeydown  = e => { if(e.key==='Enter') document.getElementById('m_ln').focus(); };
+  document.getElementById('m_ln').onkeydown  = e => { if(e.key==='Enter') document.getElementById('m_sid').focus(); };
+  document.getElementById('m_sid').onkeydown = e => { if(e.key==='Enter') submitAddStudent(); };
+}
+function me(id,msg){ const e=document.getElementById(id); e.textContent=msg; e.style.display=msg?'block':'none'; }
+async function submitAddStudent() {
+  const fn=document.getElementById('m_fn').value.trim(), ln=document.getElementById('m_ln').value.trim(), sid=document.getElementById('m_sid').value.trim();
+  ['m_fn_e','m_ln_e','m_sid_e'].forEach(i => me(i,''));
+  let ok=true;
+  if(!fn||fn.length<2){me('m_fn_e','Min 2 chars');ok=false;}
+  if(!ln||ln.length<2){me('m_ln_e','Min 2 chars');ok=false;}
+  if(!sid||sid.length<3){me('m_sid_e','Min 3 chars');ok=false;}
+  if(!ok) return;
+  const btn=document.getElementById('m_btn'); btn.disabled=true; btn.innerHTML='<span class="spin"></span> Adding…';
+  try {
+    const res=await fetch(`${API}/students`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({first_name:fn,last_name:ln,student_id:sid})});
+    const d=await res.json();
+    if(!res.ok){const e=document.getElementById('m_alert');e.textContent=d.error||'Failed.';e.style.display='block';btn.disabled=false;btn.textContent='Add Student';}
+    else{closeModal();flash(`${fn} ${ln} added.`);await loadData();}
+  } catch{closeModal();flash('Server error.','error');}
+}
+
+function showAddColModal() {
+  showModal(`<div class="modal">
+    <h2>Add Grade Column</h2><p>Enter a name (e.g. Lab1, Exam, TP2).</p>
+    <div class="modal-field"><label>Column Name *</label><input type="text" id="m_col" placeholder="e.g. Lab 1" autocomplete="off"/><div class="modal-err" id="m_col_e"></div></div>
+    <div id="m_col_alert" style="font-size:.82rem;color:var(--error);margin-top:8px;display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="submitAddCol()" id="m_col_btn">Add Column</button>
+    </div>
+  </div>`);
+  document.getElementById('m_col').focus();
+  document.getElementById('m_col').onkeydown = e => { if(e.key==='Enter') submitAddCol(); };
+}
+async function submitAddCol() {
+  const name=document.getElementById('m_col').value.trim();
+  if(!name){me('m_col_e','Required');return;}
+  const btn=document.getElementById('m_col_btn'); btn.disabled=true; btn.textContent='Adding…';
+  try {
+    const res=await fetch(`${API}/columns`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+    const d=await res.json();
+    if(!res.ok){const e=document.getElementById('m_col_alert');e.textContent=d.error||'Failed.';e.style.display='block';btn.disabled=false;btn.textContent='Add Column';}
+    else{closeModal();flash(`Column "${name}" added.`);await loadData();}
+  } catch{closeModal();flash('Server error.','error');}
+}
+
+function showRenameColModal(id, cur) {
+  showModal(`<div class="modal">
+    <h2>Rename Column</h2><p>New name for <strong>${esc(cur)}</strong>.</p>
+    <div class="modal-field"><label>New Name *</label><input type="text" id="m_rname" value="${esc(cur)}" autocomplete="off"/><div class="modal-err" id="m_rname_e"></div></div>
+    <div id="m_r_alert" style="font-size:.82rem;color:var(--error);margin-top:8px;display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="submitRenameCol(${id})" id="m_r_btn">Rename</button>
+    </div>
+  </div>`);
+  const inp=document.getElementById('m_rname'); inp.focus(); inp.select();
+  inp.onkeydown = e => { if(e.key==='Enter') submitRenameCol(id); };
+}
+async function submitRenameCol(id) {
+  const name=document.getElementById('m_rname').value.trim();
+  if(!name){me('m_rname_e','Required');return;}
+  const btn=document.getElementById('m_r_btn'); btn.disabled=true; btn.textContent='Saving…';
+  try {
+    const res=await fetch(`${API}/columns/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+    const d=await res.json();
+    if(!res.ok){const e=document.getElementById('m_r_alert');e.textContent=d.error||'Failed.';e.style.display='block';btn.disabled=false;btn.textContent='Rename';}
+    else{closeModal();flash(`Column renamed to "${name}".`);await loadData();}
+  } catch{closeModal();flash('Server error.','error');}
+}
+</script>
+</body>
+</html>

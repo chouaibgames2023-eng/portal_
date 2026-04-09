@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="en">
+<head>
+<script>(function(){if(sessionStorage.getItem('lab44_role')!=='student')window.location.replace('index.html')})()</script>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Lab44 — My Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root{--bg:#f2f3f5;--surface:#fff;--surface2:#f7f8fa;--border:#d8dce3;--border-hi:#b8bec9;--text:#1c2128;--text-muted:#5a6272;--text-light:#9099a8;--accent:#2a5bd7;--accent-dim:rgba(42,91,215,.08);--accent-hover:#1e4ec2;--success:#2e7d4f;--success-bg:#f0f7f3;--success-bd:#b6d9c5;--success-hover:#24633e;--warning:#b75c00;--warning-bg:#fff6eb;--warning-bd:#ffd9ad;--error:#b91c1c;--error-bg:#fdf2f2;--error-bd:#f9c9c9;--mono:"IBM Plex Mono",monospace;--sans:"IBM Plex Sans",sans-serif;--radius:8px;--radius-sm:5px;--shadow:0 1px 2px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.07);--tr:0.16s ease}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .topbar-left{display:flex;align-items:center;gap:10px}
+  .logo{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.65rem;color:#fff;font-weight:500}
+  .topbar-title{font-weight:600;font-size:.9rem}.topbar-sep{color:var(--border-hi)}.topbar-page{font-size:.8rem;color:var(--text-muted)}
+  .topbar-right{display:flex;gap:8px;align-items:center}
+  .welcome-chip{display:flex;align-items:center;gap:7px;padding:4px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:99px;font-size:.75rem;color:var(--text-muted)}
+  .welcome-chip strong{color:var(--text);font-weight:600}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius-sm);font-family:var(--sans);font-size:.8rem;font-weight:500;cursor:pointer;border:none;transition:all var(--tr);white-space:nowrap}
+  .btn-ghost{background:transparent;color:var(--text-muted);border:1px solid var(--border)}
+  .btn-ghost:hover{border-color:var(--border-hi);color:var(--text);background:var(--surface2)}
+  .btn-sm{padding:4px 10px;font-size:.72rem}
+  .main{flex:1;padding:28px;max-width:1000px;margin:0 auto;width:100%}
+
+  /* ── Choice screen ── */
+  .choice-wrap{display:flex;flex-direction:column;align-items:center;padding:48px 16px;animation:fadeUp .4s ease both}
+  .choice-header{text-align:center;margin-bottom:36px}
+  .choice-header h2{font-size:1.35rem;font-weight:600;letter-spacing:-.01em;margin-bottom:6px}
+  .choice-header p{font-size:.85rem;color:var(--text-muted)}
+  .choice-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%;max-width:580px}
+  .choice-card{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:28px 24px;cursor:pointer;transition:all var(--tr);display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+  .choice-card:hover{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);transform:translateY(-2px)}
+  .choice-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .icon-grades{background:var(--accent-dim)}
+  .icon-grades svg{stroke:var(--accent)}
+  .icon-vm{background:var(--success-bg)}
+  .icon-vm svg{stroke:var(--success)}
+  .choice-card h3{font-size:.95rem;font-weight:600;color:var(--text)}
+  .choice-card p{font-size:.78rem;color:var(--text-muted);line-height:1.55}
+
+  /* ── Section title ── */
+  .section-title{font-family:var(--mono);font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--text-light);margin-bottom:16px;display:flex;align-items:center;gap:10px}
+  .section-title::after{content:"";flex:1;height:1px;background:var(--border)}
+
+  /* ── Back link ── */
+  .back-link{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--text-light);cursor:pointer;border:none;background:none;padding:4px 0;margin-bottom:20px;transition:color var(--tr)}
+  .back-link:hover{color:var(--text-muted)}
+
+  /* ── Grades section ── */
+  .grades-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px 28px;animation:fadeUp .35s ease both}
+  .grades-table-wrap{overflow-x:auto}
+  .grades-table{width:100%;border-collapse:collapse;font-size:.84rem}
+  .grades-table thead tr{background:var(--surface2);border-bottom:2px solid var(--border)}
+  .grades-table thead th{padding:10px 16px;text-align:left;font-family:var(--mono);font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-light);font-weight:500;white-space:nowrap}
+  .grades-table tbody tr{border-bottom:1px solid var(--border)}
+  .grades-table tbody tr:last-child{border-bottom:none}
+  .grades-table td{padding:13px 16px;vertical-align:middle}
+  .col-name{font-weight:500}
+  .grade-val{font-family:var(--mono);font-size:.88rem;font-weight:600}
+  .grade-green{color:var(--success)}.grade-orange{color:var(--warning)}.grade-red{color:var(--error)}.grade-na{color:var(--text-light);font-style:italic;font-weight:400}
+  .grade-bar-wrap{display:flex;align-items:center;gap:10px}
+  .grade-bar-track{flex:1;height:6px;background:var(--border);border-radius:99px;overflow:hidden;max-width:120px}
+  .grade-bar-fill{height:100%;border-radius:99px;transition:width .6s ease}
+  .bar-green{background:var(--success)}.bar-orange{background:var(--warning)}.bar-red{background:var(--error)}
+  .mean-row{background:var(--surface2);border-top:2px solid var(--border)!important}
+
+  /* ── Stats ── */
+  .stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:20px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px}
+  .stat-label{font-family:var(--mono);font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-light);margin-bottom:5px}
+  .stat-value{font-size:1.4rem;font-weight:600;font-family:var(--mono)}
+  .stat-green{color:var(--success)}.stat-orange{color:var(--warning)}.stat-red{color:var(--error)}.stat-blue{color:var(--accent)}
+
+  /* ── VM Request section ── */
+  .vm-request-wrap{max-width:520px;margin:0 auto;animation:fadeUp .35s ease both}
+  .request-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:28px 32px}
+
+  /* Status badges */
+  .status-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:99px;font-family:var(--mono);font-size:.72rem;font-weight:500}
+  .badge-pending{background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning-bd)}
+  .badge-approved{background:var(--success-bg);color:var(--success);border:1px solid var(--success-bd)}
+  .badge-rejected{background:var(--error-bg);color:var(--error);border:1px solid var(--error-bd)}
+  .badge-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+  .badge-pending .badge-dot{animation:blink 1.5s ease infinite}
+
+  .btn-request{width:100%;padding:11px;background:var(--success);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--sans);font-size:.875rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background var(--tr),transform .12s;box-shadow:0 1px 3px rgba(46,125,79,.3)}
+  .btn-request:hover:not(:disabled){background:var(--success-hover);transform:translateY(-1px)}
+  .btn-request:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+  .btn-vm-go{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--sans);font-size:.875rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background var(--tr),transform .12s;box-shadow:0 1px 3px rgba(42,91,215,.25)}
+  .btn-vm-go:hover{background:var(--accent-hover);transform:translateY(-1px)}
+
+  .info-box{padding:14px 16px;border-radius:var(--radius-sm);font-size:.82rem;line-height:1.6}
+  .info-box-pending{background:var(--warning-bg);border:1px solid var(--warning-bd);color:var(--warning)}
+  .info-box-approved{background:var(--success-bg);border:1px solid var(--success-bd);color:var(--success)}
+  .info-box-rejected{background:var(--error-bg);border:1px solid var(--error-bd);color:var(--error)}
+
+  .divider{height:1px;background:var(--border);margin:20px 0}
+
+  .empty-state{text-align:center;padding:40px 20px;color:var(--text-light);font-size:.85rem;font-style:italic}
+  .loading{display:flex;align-items:center;justify-content:center;gap:10px;padding:40px;color:var(--text-light);font-size:.85rem}
+  .spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .65s linear infinite}
+  .spinner-white{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .65s linear infinite;flex-shrink:0}
+
+  footer{padding:24px 0;text-align:center;font-size:.72rem;color:var(--text-light)}
+
+  /* ── VM picker grid ── */
+  .template-grid{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:2px}
+  .template-card{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all var(--tr)}
+  .template-card:hover{border-color:var(--border-hi);background:var(--surface)}
+  .template-card.selected{border-color:var(--accent);background:var(--accent-dim)}
+  .template-radio{width:16px;height:16px;border-radius:50%;border:2px solid var(--border-hi);flex-shrink:0;margin-top:2px;transition:all var(--tr);display:flex;align-items:center;justify-content:center}
+  .template-card.selected .template-radio{border-color:var(--accent);background:var(--accent)}
+  .template-card.selected .template-radio::after{content:"";width:6px;height:6px;border-radius:50%;background:#fff}
+  .template-info{flex:1;min-width:0}
+  .template-name{font-size:.85rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .template-meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+  .template-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:.68rem;font-weight:500;border:1px solid var(--border);background:var(--surface);color:var(--text-muted)}
+  .template-desc{font-size:.72rem;color:var(--text-muted);margin-top:4px;line-height:1.4}
+
+  /* ── Attendance card ── */
+  .attendance-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  .attendance-card-left{display:flex;align-items:center;gap:12px}
+  .attendance-icon{width:38px;height:38px;border-radius:10px;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .attendance-icon svg{stroke:var(--accent)}
+  .attendance-label{font-size:.85rem;font-weight:600;color:var(--text)}
+  .attendance-sub{font-size:.75rem;color:var(--text-muted);margin-top:2px}
+  .btn-attend{padding:9px 18px;background:var(--success);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--sans);font-size:.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:background var(--tr)}
+  .btn-attend:hover:not(:disabled){background:var(--success-hover)}
+  .btn-attend:disabled{opacity:.55;cursor:not-allowed}
+  .attend-confirmed{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;background:var(--success-bg);border:1px solid var(--success-bd);border-radius:var(--radius-sm);font-size:.82rem;font-weight:600;color:var(--success)}
+
+  @keyframes fadeDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+  @media(max-width:520px){
+    .choice-cards{grid-template-columns:1fr}
+    .main{padding:16px}
+    .topbar{padding:0 16px}
+  }
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="topbar-left">
+    <div class="logo">L44</div>
+    <span class="topbar-title">Lab44</span>
+    <span class="topbar-sep">/</span>
+    <span class="topbar-page" id="topbar-page">Dashboard</span>
+  </div>
+  <div class="topbar-right">
+    <div class="welcome-chip">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <strong id="topbar-name">Student</strong>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="logout()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign Out
+    </button>
+  </div>
+</nav>
+
+<main class="main" id="main">
+  <div class="loading"><span class="spinner"></span> Loading…</div>
+</main>
+
+<footer>© <span id="yr"></span> Lab44 — EE &amp; Networks &amp; Telecom</footer>
+
+<script>
+// ── Config bootstrap ──────────────────────────────────────────────────────────
+const _configBase = window.location.origin;
+let API = _configBase + '/api';
+let GUAC_URL = '';
+async function loadConfig() {
+  try {
+    const r = await fetch(_configBase + '/api/config');
+    const c = await r.json();
+    API = c.student_api + '/api';
+    GUAC_URL = c.guacamole_url || '';
+  } catch(_) {}
+}
+
+document.getElementById('yr').textContent = new Date().getFullYear();
+
+const studentData = JSON.parse(sessionStorage.getItem('lab44_student') || 'null');
+if (!studentData) window.location.replace('index.html');
+
+const { first_name, last_name, student_id, id: studentDbId, created_at } = studentData;
+const fullName = `${first_name} ${last_name}`;
+document.getElementById('topbar-name').textContent = first_name;
+
+let currentView = 'choice';
+
+function logout() {
+  sessionStorage.removeItem('lab44_role');
+  sessionStorage.removeItem('lab44_student');
+  window.location.href = 'index.html';
+}
+
+// ── Render: choice screen ─────────────────────────────────────────────────────
+function renderChoice() {
+  currentView = 'choice';
+  document.getElementById('topbar-page').textContent = 'Dashboard';
+  document.getElementById('main').innerHTML = `
+    <div id="attendance-area"></div>
+    <div class="choice-wrap">
+      <div class="choice-header">
+        <h2>Welcome back, ${first_name}!</h2>
+        <p>What would you like to do today?</p>
+      </div>
+      <div class="choice-cards">
+        <div class="choice-card" onclick="showGrades()">
+          <div class="choice-icon icon-grades">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+          </div>
+          <h3>View My Grades</h3>
+          <p>See your lab grades, mean score and performance breakdown.</p>
+        </div>
+        <div class="choice-card" onclick="showVMRequest()">
+          <div class="choice-icon icon-vm">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+          </div>
+          <h3>My VMs</h3>
+          <p>Request virtual machines and access approved ones via SSH or RDP.</p>
+        </div>
+      </div>
+    </div>`;
+  loadAttendance();
+}
+
+// ── Attendance ────────────────────────────────────────────────────────────────
+async function loadAttendance() {
+  const area = document.getElementById('attendance-area');
+  if (!area) return;
+  try {
+    const res  = await fetch(`${API}/attendance/check?student_id=${encodeURIComponent(student_id)}`);
+    const data = await res.json();
+    if (data.present) {
+      renderAttendanceConfirmed(data.checked_at);
+    } else {
+      renderAttendanceButton();
+    }
+  } catch(_) { renderAttendanceButton(); }
+}
+
+function renderAttendanceButton() {
+  const area = document.getElementById('attendance-area');
+  if (!area) return;
+  area.innerHTML = `
+    <div class="attendance-card">
+      <div class="attendance-card-left">
+        <div class="attendance-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div>
+          <div class="attendance-label">Session Attendance</div>
+          <div class="attendance-sub">Please confirm your presence for today's lab session.</div>
+        </div>
+      </div>
+      <button class="btn-attend" id="attend-btn" onclick="markAttendance()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        I am Present
+      </button>
+    </div>`;
+}
+
+function renderAttendanceConfirmed(checkedAt) {
+  const area = document.getElementById('attendance-area');
+  if (!area) return;
+  let timeStr = '';
+  if (checkedAt) {
+    const d = new Date(checkedAt.replace(' ', 'T'));
+    if (!isNaN(d)) timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    else timeStr = checkedAt.split(' ')[1]?.slice(0,5) || '';
+  }
+  area.innerHTML = `
+    <div class="attendance-card">
+      <div class="attendance-card-left">
+        <div class="attendance-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div>
+          <div class="attendance-label">Session Attendance</div>
+          <div class="attendance-sub">Today's lab session.</div>
+        </div>
+      </div>
+      <div class="attend-confirmed">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Presence recorded${timeStr ? ' at ' + timeStr : ''}
+      </div>
+    </div>`;
+}
+
+async function markAttendance() {
+  const btn = document.getElementById('attend-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner-white"></span> Recording…`; }
+  try {
+    const res = await fetch(`${API}/attendance`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        student_db_id: studentDbId,
+        student_id,
+        student_name: fullName
+      })
+    });
+    const data = await res.json();
+    if (res.ok) renderAttendanceConfirmed(data.checked_at);
+    else { if (btn) { btn.disabled = false; btn.innerHTML = '✓ I am Present'; } }
+  } catch(_) { if (btn) { btn.disabled = false; btn.innerHTML = '✓ I am Present'; } }
+}
+
+// ── Render: grades ────────────────────────────────────────────────────────────
+async function showGrades() {
+  currentView = 'grades';
+  document.getElementById('topbar-page').textContent = 'My Grades';
+  document.getElementById('main').innerHTML = `
+    <button class="back-link" onclick="renderChoice()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+    <div class="loading"><span class="spinner"></span> Loading grades…</div>`;
+
+  try {
+    const res  = await fetch(`${API}/data`);
+    const data = await res.json();
+    const myGrades = {};
+    data.grades.filter(g => g.student_id === studentDbId).forEach(g => { myGrades[g.column_id] = g.value; });
+
+    const gradeRows = data.columns.map(c => ({ name: c.name, value: myGrades[c.id] !== undefined ? myGrades[c.id] : null }));
+    const numeric = gradeRows.filter(r => r.value !== null);
+    const mean = numeric.length ? parseFloat((numeric.reduce((a,b)=>a+b.value,0)/numeric.length).toFixed(2)) : null;
+    const high = numeric.length ? Math.max(...numeric.map(r=>r.value)) : null;
+    const low  = numeric.length ? Math.min(...numeric.map(r=>r.value)) : null;
+
+    const gc = v => v===null?'':v>=12?'grade-green':v>=8?'grade-orange':'grade-red';
+    const bc = v => v>=12?'bar-green':v>=8?'bar-orange':'bar-red';
+    const sc = v => v>=12?'stat-green':v>=8?'stat-orange':'stat-red';
+
+    const statsHTML = `
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Mean</div><div class="stat-value ${mean!==null?sc(mean):''}">${mean!==null?mean:'—'}</div></div>
+        <div class="stat"><div class="stat-label">Graded</div><div class="stat-value stat-blue">${numeric.length}</div></div>
+        <div class="stat"><div class="stat-label">Highest</div><div class="stat-value ${high!==null?sc(high):''}">${high!==null?high:'—'}</div></div>
+        <div class="stat"><div class="stat-label">Lowest</div><div class="stat-value ${low!==null?sc(low):''}">${low!==null?low:'—'}</div></div>
+      </div>`;
+
+    const rows = gradeRows.map(r => {
+      const hasVal = r.value !== null;
+      const pct = hasVal ? (r.value/20*100).toFixed(0) : 0;
+      return `<tr>
+        <td class="col-name">${r.name}</td>
+        <td><span class="grade-val ${hasVal?gc(r.value):'grade-na'}">${hasVal?r.value+' / 20':'Not recorded'}</span></td>
+        <td>${hasVal?`<div class="grade-bar-wrap"><div class="grade-bar-track"><div class="grade-bar-fill ${bc(r.value)}" style="width:${pct}%"></div></div><span style="font-family:var(--mono);font-size:.68rem;color:var(--text-light)">${pct}%</span></div>`:'—'}</td>
+      </tr>`;
+    }).join('');
+
+    const meanRow = mean !== null ? `<tr class="mean-row"><td class="col-name" style="font-weight:600">Overall Mean</td><td><span class="grade-val ${gc(mean)}">${mean} / 20</span></td><td><div class="grade-bar-wrap"><div class="grade-bar-track"><div class="grade-bar-fill ${bc(mean)}" style="width:${(mean/20*100).toFixed(0)}%"></div></div><span style="font-family:var(--mono);font-size:.68rem;color:var(--text-light)">${(mean/20*100).toFixed(0)}%</span></div></td></tr>` : '';
+
+    document.getElementById('main').innerHTML = `
+      <button class="back-link" onclick="renderChoice()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
+      ${statsHTML}
+      <div class="grades-card">
+        <div class="section-title">Grade Details</div>
+        ${!data.columns.length
+          ? '<div class="empty-state">No grade columns have been added yet.</div>'
+          : `<div class="grades-table-wrap"><table class="grades-table">
+              <thead><tr><th>Subject / Lab</th><th>Grade</th><th>Progress</th></tr></thead>
+              <tbody>${rows}${meanRow}</tbody>
+             </table></div>`}
+      </div>`;
+  } catch {
+    document.getElementById('main').innerHTML = `
+      <button class="back-link" onclick="renderChoice()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
+      <div style="padding:14px;background:var(--error-bg);border:1px solid var(--error-bd);border-radius:var(--radius-sm);color:var(--error);font-size:.82rem;">Could not load grades. Make sure the server is running.</div>`;
+  }
+}
+
+// ── Render: VM requests list ──────────────────────────────────────────────────
+let _pollInterval = null;
+
+async function showVMRequest() {
+  currentView = 'vm';
+  document.getElementById('topbar-page').textContent = 'My VMs';
+  document.getElementById('main').innerHTML = `
+    <button class="back-link" onclick="renderChoice()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+    <div class="loading"><span class="spinner"></span> Loading…</div>`;
+  try {
+    await loadConfig();
+    const res  = await fetch(`${API}/vm-requests/student/${studentDbId}/all`);
+    const data = await res.json();
+    renderAllRequests(data.requests || []);
+    startPollingIfNeeded(data.requests || []);
+  } catch { renderAllRequests([], true); }
+}
+
+function startPollingIfNeeded(requests) {
+  if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null; }
+  const hasIp = r => !!(r.live_ip || r.vm_ip);
+  const needsPoll = requests.some(r =>
+    r.status === 'pending' || (r.status === 'approved' && !hasIp(r))
+  );
+  if (!needsPoll) return;
+  _pollInterval = setInterval(async () => {
+    if (currentView !== 'vm') { clearInterval(_pollInterval); _pollInterval = null; return; }
+    try {
+      const res  = await fetch(`${API}/vm-requests/student/${studentDbId}/all`);
+      const data = await res.json();
+      const reqs = data.requests || [];
+      renderAllRequests(reqs);
+      const stillNeeds = reqs.some(r =>
+        r.status === 'pending' || (r.status === 'approved' && !hasIp(r))
+      );
+      if (!stillNeeds) { clearInterval(_pollInterval); _pollInterval = null; }
+    } catch(_) {}
+  }, 8000);
+}
+
+// ── Guacamole quick-access URL builder ────────────────────────────────────────
+// Uses the Guacamole quick-connect URL format:
+// protocol://[user[:password]@]hostname[:port]/?security=any&ignore-cert=true
+// Encoded as base64 and appended to /#/client/
+function guacURL(protocol, host) {
+  if (!GUAC_URL || !host) return null;
+  const defaultPort = protocol === 'rdp' ? '3389' : '22';
+  // Quick-connect connection string passed to Guacamole
+  // Format expected by the quick-connect extension
+  const connStr = `${protocol}://admin:000000@${host}:${defaultPort}/?security=any&ignore-cert=true`;
+  const b64 = btoa(connStr);
+  return `${GUAC_URL.replace(/\/$/, '')}/#/client/${b64}`;
+}
+
+// ── Render: all requests + "Add Another" button ───────────────────────────────
+function renderAllRequests(requests, error = false) {
+  const main = document.getElementById('main');
+  if (!main) return;
+
+  if (error) {
+    main.innerHTML = `
+      <button class="back-link" onclick="renderChoice()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
+      <div style="padding:14px;background:var(--error-bg);border:1px solid var(--error-bd);border-radius:var(--radius-sm);color:var(--error);font-size:.82rem;">Cannot reach server. Make sure it is running.</div>`;
+    return;
+  }
+
+  const cards = requests.length ? requests.map(req => renderRequestCard(req)).join('') :
+    `<div class="empty-state" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:36px 20px;">
+      No VM requests yet. Click below to request your first VM.
+    </div>`;
+
+  main.innerHTML = `
+    <button class="back-link" onclick="renderChoice()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+    <div style="max-width:620px;margin:0 auto">
+      <div class="section-title">My VM Requests</div>
+      <div id="requests-list" style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px">
+        ${cards}
+      </div>
+      <button class="btn-request" onclick="showVMPicker()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Request Another VM
+      </button>
+    </div>`;
+}
+
+// ── Render a single request card ──────────────────────────────────────────────
+function renderRequestCard(req) {
+  const vmName  = esc(req.vm_name || req.template_name || '—');
+  const date    = req.requested_at ? req.requested_at.split(' ')[0] : '';
+  const ip      = req.live_ip || req.vm_ip || '';
+  const ps      = req.live_power_state || '';
+
+  let statusBadge = '';
+  let body = '';
+
+  if (req.status === 'pending') {
+    statusBadge = `<span class="status-badge badge-pending"><span class="badge-dot"></span>Pending</span>`;
+    body = `
+      <div class="info-box info-box-pending" style="margin-top:12px">
+        Waiting for instructor approval. Check back soon.
+      </div>
+      <div style="margin-top:12px;padding:10px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm)">
+        <div style="font-family:var(--mono);font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-light);margin-bottom:3px">Requested VM</div>
+        <div style="font-size:.85rem;font-weight:600">${vmName}</div>
+        <div style="font-family:var(--mono);font-size:.65rem;color:var(--text-muted);margin-top:2px">${esc(req.template_uuid || '')}</div>
+      </div>`;
+
+  } else if (req.status === 'approved') {
+    statusBadge = `<span class="status-badge badge-approved"><span class="badge-dot"></span>Approved</span>`;
+
+    // ── Power state badge ──────────────────────────────────────────────────────
+    let psBadge = '';
+    if (ps === 'Running') {
+      psBadge = `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-family:var(--mono);font-size:.65rem;font-weight:500;background:var(--success-bg);color:var(--success);border:1px solid var(--success-bd)">
+        <span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>Running</span>`;
+    } else if (ps) {
+      psBadge = `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-family:var(--mono);font-size:.65rem;font-weight:500;background:var(--warning-bg);color:var(--warning);border:1px solid var(--warning-bd);animation:blink 1.5s infinite">
+        <span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>${esc(ps)}</span>`;
+    }
+
+    // ── Access buttons ──────────────────────────────────────────────────────────
+    let accessSection = '';
+    if (ip && GUAC_URL) {
+      const sshUrl = guacURL('ssh', ip);
+      const rdpUrl = guacURL('rdp', ip);
+      accessSection = `
+        <div style="margin-top:4px;padding:9px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;gap:10px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span style="font-family:var(--mono);font-size:.8rem;font-weight:600;color:var(--text)">${esc(ip)}</span>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <a href="${sshUrl}" target="_blank" rel="noopener"
+             style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 14px;background:var(--text);color:#fff;border-radius:var(--radius-sm);font-size:.82rem;font-weight:600;text-decoration:none;transition:background .15s"
+             onmouseover="this.style.background='#2d3748'" onmouseout="this.style.background='var(--text)'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            SSH
+          </a>
+          <a href="${rdpUrl}" target="_blank" rel="noopener"
+             style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 14px;background:var(--accent);color:#fff;border-radius:var(--radius-sm);font-size:.82rem;font-weight:600;text-decoration:none;transition:background .15s"
+             onmouseover="this.style.background='var(--accent-hover)'" onmouseout="this.style.background='var(--accent)'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            RDP
+          </a>
+        </div>`;
+    } else if (ip && !GUAC_URL) {
+      accessSection = `
+        <div style="margin-top:10px;padding:9px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;gap:10px">
+          <span style="font-family:var(--mono);font-size:.8rem;color:var(--text)">${esc(ip)}</span>
+        </div>
+        <div style="font-size:.72rem;color:var(--text-light);margin-top:6px">Connect manually using the IP above.</div>`;
+    } else if (ps === 'Running') {
+      // Running but no IP yet — guest agent still initializing
+      accessSection = `
+        <div style="margin-top:10px;display:flex;align-items:center;gap:8px;padding:9px 13px;background:var(--warning-bg);border:1px solid var(--warning-bd);border-radius:var(--radius-sm);font-size:.78rem;color:var(--warning)">
+          <span class="spinner" style="border-top-color:var(--warning);width:12px;height:12px"></span>
+          VM is running — waiting for IP address from guest agent…
+        </div>`;
+    } else {
+      // Halted or unknown — VM still booting
+      accessSection = `
+        <div style="margin-top:10px;display:flex;align-items:center;gap:8px;padding:9px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.78rem;color:var(--text-muted)">
+          <span class="spinner" style="width:12px;height:12px"></span>
+          VM is starting up — please wait. This page updates automatically.
+        </div>`;
+    }
+
+    body = `
+      <div class="info-box info-box-approved" style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <span>VM: <strong>${vmName}</strong></span>
+        ${psBadge}
+      </div>
+      ${req.note ? `<div style="font-size:.78rem;color:var(--text-muted);margin-top:8px;padding:9px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm)">Note: <em>${esc(req.note)}</em></div>` : ''}
+      ${accessSection}`;
+
+  } else if (req.status === 'rejected') {
+    statusBadge = `<span class="status-badge badge-rejected"><span class="badge-dot"></span>Rejected</span>`;
+    body = `
+      <div class="info-box info-box-rejected" style="margin-top:12px">
+        Request not approved.${req.note ? ` Reason: <strong>${esc(req.note)}</strong>` : ' Contact your instructor.'}
+      </div>`;
+  }
+
+  return `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow)">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="font-weight:600;font-size:.9rem">${vmName}</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          ${statusBadge}
+          <span style="font-size:.72rem;color:var(--text-light)">${date}</span>
+        </div>
+      </div>
+      ${body}
+    </div>`;
+}
+
+// ── VM Picker — shows existing VMs on XCP-ng ──────────────────────────────────
+let selectedVM = null;
+
+async function showVMPicker() {
+  document.getElementById('main').innerHTML = `
+    <button class="back-link" onclick="showVMRequest()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to My VMs
+    </button>
+    <div class="vm-request-wrap">
+      <div class="request-card">
+        <div class="section-title">Request a VM</div>
+        <p style="font-size:.82rem;color:var(--text-muted);line-height:1.6;margin-bottom:18px;">
+          Choose a template below and submit your request.
+          Your instructor will review and provision the VM for you.
+          SSH and RDP access will be available once approved.
+        </p>
+
+        <div style="font-size:.8rem;font-weight:500;margin-bottom:8px">Choose a template</div>
+        <div id="vm-picker-area">
+          <div class="loading"><span class="spinner"></span> Loading templates…</div>
+        </div>
+        <button class="btn-request" id="submit-btn" onclick="submitVMRequest()" disabled style="margin-top:20px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Select a template first
+        </button>
+      </div>
+    </div>`;
+
+  selectedVM = null;
+  await loadVMList();
+}
+
+async function loadVMList() {
+  const area = document.getElementById('vm-picker-area');
+  if (!area) return;
+  try {
+    // Fetch TEMPLATES only — not all running VMs
+    const res  = await fetch(`${API}/xo/templates`);
+    const data = await res.json();
+
+    if (!data.ok || !data.templates || !data.templates.length) {
+      area.innerHTML = `
+        <div class="info-box" style="background:var(--warning-bg);border:1px solid var(--warning-bd);color:var(--warning);margin-bottom:0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;display:inline;margin-right:6px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          ${data.error ? `Could not reach XCP-ng: <strong>${esc(data.error)}</strong><br>` : 'No templates found on the XCP-ng server.<br>'}
+          Contact your instructor.
+        </div>`;
+      const btn = document.getElementById('submit-btn');
+      if (btn) btn.style.display = 'none';
+      return;
+    }
+
+    area.innerHTML = `
+      <div class="template-grid" id="vm-grid">
+        ${data.templates.map(t => {
+          const mem  = t.memory ? (t.memory / (1024**3)).toFixed(1) + ' GB RAM' : '';
+          const vcpu = t.vcpus  ? t.vcpus + ' vCPU' : '';
+          const os   = t.os     ? esc(t.os) : '';
+          return `<div class="template-card" id="vmcard-${t.uuid}" onclick="selectVM('${esc(t.uuid)}','${escAttr(t.name)}')">
+            <div class="template-radio"></div>
+            <div class="template-info">
+              <div class="template-name">${esc(t.name)}</div>
+              <div class="template-meta">
+                ${mem  ? `<span class="template-chip">${mem}</span>`  : ''}
+                ${vcpu ? `<span class="template-chip">${vcpu}</span>` : ''}
+                ${os   ? `<span class="template-chip">${os}</span>`   : ''}
+              </div>
+              ${t.desc ? `<div class="template-desc">${esc(t.desc)}</div>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  } catch (err) {
+    area.innerHTML = `
+      <div class="info-box" style="background:var(--error-bg);border:1px solid var(--error-bd);color:var(--error);margin-bottom:12px">
+        Failed to fetch templates: ${esc(err.message)}
+      </div>
+      <button class="btn-ghost btn" onclick="loadVMList()" style="width:100%;justify-content:center">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Retry
+      </button>`;
+    const btn = document.getElementById('submit-btn');
+    if (btn) btn.style.display = 'none';
+  }
+}
+
+function selectVM(uuid, name) {
+  selectedVM = { uuid, name };
+  document.querySelectorAll('.template-card').forEach(el => el.classList.remove('selected'));
+  const card = document.getElementById(`vmcard-${uuid}`);
+  if (card) card.classList.add('selected');
+  const btn = document.getElementById('submit-btn');
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      Request <strong style="margin-left:4px">${esc(name)}</strong>`;
+  }
+}
+
+async function submitVMRequest() {
+  if (!selectedVM) { alert('Please select a template first.'); return; }
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-white"></span> Submitting…`;
+  try {
+    const res = await fetch(`${API}/vm-requests`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        student_db_id:    studentDbId,
+        student_name:     fullName,
+        student_id,
+        template_uuid:    selectedVM.uuid,
+        template_name:    selectedVM.name,
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      btn.disabled = false;
+      btn.innerHTML = `Submit VM Request`;
+      alert(data.error || 'Failed to submit.');
+    } else {
+      await showVMRequest();
+    }
+  } catch {
+    btn.disabled = false;
+    btn.innerHTML = `Submit VM Request`;
+    alert('Cannot reach server.');
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  return String(s ?? '').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+}
+
+// Boot
+(async () => { await loadConfig(); renderChoice(); })();
+</script>
+</body>
+</html>

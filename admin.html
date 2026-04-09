@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lab44 — Admin Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#f2f3f5;--surface:#fff;--surface2:#f7f8fa;--border:#d8dce3;--border-hi:#b8bec9;--text:#1c2128;--text-muted:#5a6272;--text-light:#9099a8;--accent:#2a5bd7;--accent-dim:rgba(42,91,215,.08);--success:#2e7d4f;--success-bg:#f0f7f3;--success-bd:#b6d9c5;--error:#b91c1c;--error-bg:#fdf2f2;--error-bd:#f9c9c9;--mono:"IBM Plex Mono",monospace;--sans:"IBM Plex Sans",sans-serif;--radius:8px;--radius-sm:5px;--shadow:0 1px 2px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.07);--tr:0.16s ease}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+    .page{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:36px 32px;width:100%;max-width:380px;animation:fadeUp .4s ease both}
+    .card-header{text-align:center;margin-bottom:28px}
+    .logo-wrap{width:52px;height:52px;background:var(--text);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+    .logo-wrap svg{stroke:#fff}
+    .card-header h1{font-size:1.25rem;font-weight:600;letter-spacing:-.01em}
+    .card-header p{font-size:.82rem;color:var(--text-muted);margin-top:4px}
+    .section-title{font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--text-light);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+    .section-title::after{content:"";flex:1;height:1px;background:var(--border)}
+    .field{margin-bottom:16px}
+    label{display:block;font-size:.8rem;font-weight:500;margin-bottom:6px}
+    .pass-wrap{position:relative}
+    input[type=password],input[type=text]{width:100%;padding:9px 12px;font-family:var(--sans);font-size:.875rem;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;transition:all var(--tr)}
+    input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+    input.err{border-color:var(--error)}
+    .toggle-pass{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-light);padding:2px;display:flex}
+    .toggle-pass:hover{color:var(--text-muted)}
+    .alert{padding:11px 14px;border-radius:var(--radius-sm);font-size:.82rem;margin-bottom:16px;display:none;line-height:1.5}
+    .alert.show{display:block;animation:fadeIn .2s ease}
+    .alert-error{background:var(--error-bg);border:1px solid var(--error-bd);color:var(--error)}
+    .alert-success{background:var(--success-bg);border:1px solid var(--success-bd);color:var(--success)}
+    .btn-primary{width:100%;margin-top:4px;padding:11px;background:var(--text);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--sans);font-size:.875rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background var(--tr),transform .12s}
+    .btn-primary:hover:not(:disabled){background:#2d3748;transform:translateY(-1px)}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+    .spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .65s linear infinite;flex-shrink:0}
+    .divider{height:1px;background:var(--border);margin:22px 0}
+    .back-link{text-align:center;font-size:.8rem;color:var(--text-light)}
+    .back-link a{color:var(--accent);text-decoration:none;font-weight:500}
+    .back-link a:hover{text-decoration:underline}
+    footer{text-align:center;font-size:.72rem;color:var(--text-light);padding:20px 0}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="card">
+    <div class="card-header">
+      <div class="logo-wrap"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <h1>Admin Access</h1><p>Lab44 management panel</p>
+    </div>
+    <div class="section-title">Admin credentials</div>
+    <div id="alert" class="alert"></div>
+    <form id="form" novalidate>
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="pass-wrap">
+          <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+          <button type="button" class="toggle-pass" id="toggle-btn">
+            <svg id="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary" id="btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Access Admin Panel
+      </button>
+    </form>
+  </div>
+  <footer>© <span id="yr"></span> Lab44</footer>
+</div>
+<script>
+  const _configBase = window.location.origin;
+  let API = _configBase + '/api';
+  async function loadConfig() {
+    try { const r = await fetch(_configBase+'/api/config'); const c=await r.json(); API=c.admin_api+'/api'; } catch(_) {}
+  }
+  document.getElementById('yr').textContent=new Date().getFullYear();
+  if(sessionStorage.getItem('lab44_role')==='admin')window.location.href='students.html';
+  let shown=false;
+  document.getElementById('toggle-btn').addEventListener('click',()=>{
+    shown=!shown;
+    document.getElementById('password').type=shown?'text':'password';
+    document.getElementById('eye-icon').innerHTML=shown
+      ?'<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+      :'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  });
+  function showAlert(msg,t='error'){const e=document.getElementById('alert');e.className=`alert alert-${t} show`;e.textContent=msg}
+  const LOCK=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+  document.getElementById('form').addEventListener('submit',async e=>{
+    e.preventDefault();
+    const pass=document.getElementById('password').value;
+    if(!pass){showAlert('Password is required.');return}
+    await loadConfig();
+    const btn=document.getElementById('btn');btn.disabled=true;btn.innerHTML=`<span class="spinner"></span> Verifying…`;
+    try{
+      const res=await fetch(`${API}/auth/admin`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pass})});
+      const data=await res.json();
+      if(!res.ok){showAlert(data.error||'Incorrect password.');document.getElementById('password').value='';document.getElementById('password').classList.add('err');}
+      else{sessionStorage.setItem('lab44_role','admin');showAlert('Access granted. Redirecting…','success');setTimeout(()=>{window.location.href='students.html'},800)}
+    }catch{showAlert('Cannot reach server. Make sure it is running.')}
+    btn.disabled=false;btn.innerHTML=`${LOCK} Access Admin Panel`;
+  });
+  document.getElementById('password').addEventListener('input',()=>document.getElementById('password').classList.remove('err'));
+</script>
+</body>
+</html>
