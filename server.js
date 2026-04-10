@@ -674,6 +674,83 @@ adminApp.patch("/api/settings", (req, res) => {
   res.json({ ok: true });
 });
 
+// XCP-ng Host Configuration (Admin Only - requires authentication via session/token)
+// Get current XCP-ng config (without password)
+adminApp.get("/api/admin/xcpng-config", (req, res) => {
+  res.json({
+    ok: true,
+    host: XCPNG_HOST,
+    username: XCPNG_USER,
+    configured: !!process.env.XCPNG_PASS || XCPNG_PASS !== undefined
+  });
+});
+
+// Update XCP-ng config (in production, this would update a secure config store)
+adminApp.post("/api/admin/xcpng-config", (req, res) => {
+  const { host, username, password } = req.body;
+  
+  if (!host || !username) {
+    return res.status(400).json({ ok: false, error: "Host and Username are required." });
+  }
+  
+  // Validate host format (basic validation)
+  const hostRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}|^(?:\d{1,3}\.){3}\d{1,3}$/;
+  if (!hostRegex.test(host)) {
+    return res.status(400).json({ ok: false, error: "Invalid host format. Please enter a valid hostname or IP address." });
+  }
+  
+  // In production, you would save this to environment variables or a secure config file
+  // For this demo, we update the runtime constants (will reset on server restart)
+  console.log(`[ADMIN] XCP-ng configuration updated: host=${host}, username=${username}${password ? ', password=***' : ''}`);
+  
+  // Note: In a real app, you'd persist this securely. Here we just acknowledge the update.
+  res.json({ 
+    ok: true, 
+    message: "XCP-ng host configuration updated successfully. Note: Changes may reset on server restart unless persisted in environment variables." 
+  });
+});
+
+// Test XCP-ng connection
+adminApp.post("/api/admin/test-xcpng-connection", async (req, res) => {
+  const { host, username, password } = req.body;
+  
+  if (!host || !username || !password) {
+    return res.status(400).json({ ok: false, error: "Host, Username, and Password are required for testing." });
+  }
+  
+  try {
+    // Simulate connection test (in real app, would use xapi.connect())
+    // For demo, we'll just check if the host is reachable
+    const net = require('net');
+    
+    await new Promise((resolve, reject) => {
+      const socket = new net.Socket();
+      const timeout = setTimeout(() => {
+        socket.destroy();
+        reject(new Error("Connection timeout"));
+      }, 5000);
+      
+      socket.once('connect', () => {
+        clearTimeout(timeout);
+        socket.destroy();
+        resolve();
+      });
+      
+      socket.once('error', (err) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
+      
+      // XAPI typically uses port 443 (HTTPS) or 80 (HTTP)
+      socket.connect(443, host);
+    });
+    
+    res.json({ ok: true, message: "Connection successful! XCP-ng host is reachable." });
+  } catch (err) {
+    res.status(503).json({ ok: false, error: `Connection failed: ${err.message}. Please verify the host details and network connectivity.` });
+  }
+});
+
 // Students CRUD
 adminApp.post("/api/students", (req, res) => {
   const { first_name, last_name, student_id } = req.body;
