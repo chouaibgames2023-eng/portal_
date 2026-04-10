@@ -1,7 +1,8 @@
 // Lab44 — Student Grades + VM Management Backend
-// npm install express better-sqlite3 cors
+// npm install express better-sqlite3 cors helmet express-rate-limit
 // node server.js
 //
+// SECURITY HARDENED VERSION
 // Runs TWO servers:
 //   PORT 3000  → student-facing API  (index.html, register.html, studentsinterface.html)
 //   PORT 4000  → admin-facing API    (admin.html, students.html, adminmonitoring.html)
@@ -14,21 +15,33 @@ const Database = require("better-sqlite3");
 const cors = require("cors");
 const path = require("path");
 const https = require("https");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const crypto = require("crypto");
 
 // ── Ports ─────────────────────────────────────────────────────────────────────
 const STUDENT_PORT = parseInt(process.env.STUDENT_PORT || "3000");
-const ADMIN_PORT = parseInt(process.env.ADMIN_PORT || "4000"); // ← Change this to any secret port
+const ADMIN_PORT = parseInt(process.env.ADMIN_PORT || "4000");
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "lab44admin";
+// SECURITY: Force admin password change from default
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD) {
+  console.error("\n⚠️  CRITICAL: ADMIN_PASSWORD environment variable not set!\n");
+  console.error("Please set a strong password: export ADMIN_PASSWORD='your-secure-password-here'\n");
+  process.exit(1);
+}
 
 // ── XCP-ng direct XAPI ───────────────────────────────────────────────────────
 const XCPNG_HOST = process.env.XCPNG_HOST || "192.168.100.2";
 const XCPNG_USER = process.env.XCPNG_USER || "root";
-const XCPNG_PASS = process.env.XCPNG_PASS || "000000";
+const XCPNG_PASS = process.env.XCPNG_PASS;
+if (!XCPNG_PASS) {
+  console.error("\n⚠️  CRITICAL: XCPNG_PASS environment variable not set!\n");
+  process.exit(1);
+}
 
 // ── Guacamole ─────────────────────────────────────────────────────────────────
-// Set GUACAMOLE_URL to your Apache Guacamole base URL, e.g. "http://192.168.100.80:8080/guacamole"
 const GUACAMOLE_URL = process.env.GUACAMOLE_URL || "http://192.168.1.136:8080/guacamole";
 
 // ── Per-page API URLs ─────────────────────────────────────────────────────────
@@ -398,11 +411,36 @@ async function xapiDeleteVM(vmRef, powerState) {
 const studentApp = express();
 const adminApp = express();
 
+// ── Security Middleware ──────────────────────────────────────────────────────
+// Rate limiting to prevent brute force attacks
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: { error: 'Too many requests, please try again later.' }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // limit each IP to 10 login attempts per windowMs
+  message: { error: 'Too many login attempts, please try again later.' }
+});
+
 // ── Middleware ───────────────────────────────────────────────────────────────
-studentApp.use(cors());
-studentApp.use(express.json());
-adminApp.use(cors());
-adminApp.use(express.json());
+// Apply security headers
+studentApp.use(helmet({ contentSecurityPolicy: false })); // Disable CSP for inline scripts (can be hardened further)
+adminApp.use(helmet({ contentSecurityPolicy: false }));
+
+studentApp.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }));
+adminApp.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }));
+
+studentApp.use(express.json({ limit: '10kb' })); // Limit body size
+adminApp.use(express.json({ limit: '10kb' }));
+
+// Apply rate limiting to API routes
+studentApp.use('/api', apiLimiter);
+adminApp.use('/api', apiLimiter);
+studentApp.use('/api/auth', authLimiter);
+adminApp.use('/api/auth', authLimiter);
 
 // ── Student port (3000) — whitelist: only student pages ──────────────────────
 // Root → student login
@@ -444,15 +482,15 @@ function mountSharedRoutes(app) {
 
   app.get("/api/data", (req, res) => {
     res.json({
-      students: db.prepare("SELECT * FROM students ORDER BY last_name,first_name").all(),
-      columns: db.prepare("SELECT * FROM grade_columns ORDER BY id").all(),
-      grades: db.prepare("SELECT * FROM grades").all(),
+      students: db.prepare("SELECT id, first_name, last_name, student_id, created_at FROM students ORDER BY last_name,first_name").all(),
+      columns: db.prepare("SELECT id, name, created_at FROM grade_columns ORDER BY id").all(),
+      grades: db.prepare("SELECT student_id, column_id, value FROM grades").all(),
     });
   });
 
   app.get("/api/vm-requests/student/:id", (req, res) => {
     const r = db.prepare(
-      "SELECT * FROM vm_requests WHERE student_db_id=? ORDER BY requested_at DESC LIMIT 1"
+      "SELECT id, student_db_id, student_name, student_id, template_uuid, template_name, status, note, vm_uuid, vm_name, requested_at, reviewed_at FROM vm_requests WHERE student_db_id=? ORDER BY requested_at DESC LIMIT 1"
     ).get(req.params.id);
     res.json({ request: r || null });
   });
@@ -461,7 +499,7 @@ function mountSharedRoutes(app) {
   // Enriches approved requests with live XCP-ng power_state + IP
   app.get("/api/vm-requests/student/:id/all", async (req, res) => {
     const rows = db.prepare(
-      "SELECT * FROM vm_requests WHERE student_db_id=? ORDER BY requested_at DESC"
+      "SELECT id, student_db_id, student_name, student_id, template_uuid, template_name, status, note, vm_uuid, vm_name, vm_ip, access_protocol, requested_at, reviewed_at FROM vm_requests WHERE student_db_id=? ORDER BY requested_at DESC"
     ).all(req.params.id);
 
     const approved = rows.filter(r => r.status === "approved" && r.vm_uuid);
@@ -522,11 +560,18 @@ mountSharedRoutes(adminApp);
 
 studentApp.post("/api/auth/student", (req, res) => {
   const { first_name, last_name, student_id } = req.body;
-  if (!first_name || !last_name || !student_id)
-    return res.status(400).json({ error: "All fields are required." });
+  // Input validation - sanitize and validate lengths
+  const fn = String(first_name || '').trim();
+  const ln = String(last_name || '').trim();
+  const sid = String(student_id || '').trim();
+  
+  if (!fn || fn.length < 2 || !ln || ln.length < 2 || !sid || sid.length < 3)
+    return res.status(400).json({ error: "Invalid credentials." });
+  
+  // Use parameterized query (already safe, but adding explicit sanitization)
   const s = db.prepare(
-    `SELECT * FROM students WHERE LOWER(first_name)=LOWER(?) AND LOWER(last_name)=LOWER(?) AND student_id=?`
-  ).get(first_name.trim(), last_name.trim(), student_id.trim());
+    `SELECT id, first_name, last_name, student_id, created_at FROM students WHERE LOWER(first_name)=LOWER(?) AND LOWER(last_name)=LOWER(?) AND student_id=?`
+  ).get(fn, ln, sid);
   if (!s) return res.status(404).json({ error: "Student not found." });
   res.json({ ok: true, student: s });
 });
@@ -536,12 +581,18 @@ studentApp.post("/api/students/register", (req, res) => {
   if (!enabled || enabled.value !== "true")
     return res.status(403).json({ error: "Registration is currently disabled." });
   const { first_name, last_name, student_id } = req.body;
-  if (!first_name || !last_name || !student_id)
-    return res.status(400).json({ error: "All fields are required." });
+  // Input validation and sanitization
+  const fn = String(first_name || '').trim();
+  const ln = String(last_name || '').trim();
+  const sid = String(student_id || '').trim();
+  
+  if (!fn || fn.length < 2 || !ln || ln.length < 2 || !sid || sid.length < 3)
+    return res.status(400).json({ error: "Invalid input data." });
+  
   try {
     const r = db.prepare("INSERT INTO students (first_name,last_name,student_id) VALUES (?,?,?)")
-      .run(first_name.trim(), last_name.trim(), student_id.trim());
-    const student = db.prepare("SELECT * FROM students WHERE id=?").get(r.lastInsertRowid);
+      .run(fn, ln, sid);
+    const student = db.prepare("SELECT id, first_name, last_name, student_id, created_at FROM students WHERE id=?").get(r.lastInsertRowid);
     res.json({ ok: true, student });
   } catch (e) {
     if (e.message.includes("UNIQUE")) return res.status(409).json({ error: "Student ID already registered." });
@@ -606,8 +657,13 @@ studentApp.get("/api/xapi/vms", async (req, res) => {
 
 adminApp.post("/api/auth/admin", (req, res) => {
   const { password } = req.body;
-  if (!password) return res.status(400).json({ error: "Password required." });
-  if (password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Incorrect password." });
+  if (!password || typeof password !== 'string') return res.status(400).json({ error: "Password required." });
+  // Constant-time comparison to prevent timing attacks
+  const safePwd = String(ADMIN_PASSWORD);
+  const inputPwd = String(password);
+  if (safePwd.length !== inputPwd.length || !crypto.timingSafeEqual(Buffer.from(safePwd), Buffer.from(inputPwd))) {
+    return res.status(401).json({ error: "Incorrect password." });
+  }
   res.json({ ok: true, role: "admin" });
 });
 
@@ -687,7 +743,7 @@ adminApp.put("/api/grades", (req, res) => {
 // VM Requests — admin reads all
 adminApp.get("/api/vm-requests", (req, res) => {
   const requests = db.prepare(
-    "SELECT * FROM vm_requests ORDER BY CASE status WHEN 'pending' THEN 0 ELSE 1 END, requested_at DESC"
+    "SELECT id, student_db_id, student_name, student_id, template_uuid, template_name, status, note, vm_uuid, vm_name, vm_ip, access_protocol, requested_at, reviewed_at FROM vm_requests ORDER BY CASE status WHEN 'pending' THEN 0 ELSE 1 END, requested_at DESC"
   ).all();
   res.json({ requests });
 });
@@ -712,7 +768,7 @@ adminApp.delete("/api/vm-requests", (req, res) => {
 // Cloned VMs with student assignment — joins approved requests with live XAPI IP data
 adminApp.get("/api/vm-assignments", async (req, res) => {
   const approved = db.prepare(
-    "SELECT vr.*, s.first_name, s.last_name FROM vm_requests vr " +
+    "SELECT vr.id, vr.student_db_id, vr.student_name, vr.student_id, vr.template_uuid, vr.template_name, vr.status, vr.note, vr.vm_uuid, vr.vm_name, vr.vm_ip, vr.access_protocol, vr.requested_at, vr.reviewed_at, s.first_name, s.last_name FROM vm_requests vr " +
     "LEFT JOIN students s ON s.id = vr.student_db_id " +
     "WHERE vr.status = 'approved' AND vr.vm_uuid IS NOT NULL " +
     "ORDER BY vr.reviewed_at DESC"
@@ -756,7 +812,7 @@ adminApp.patch("/api/vm-requests/:id", async (req, res) => {
   const { status, note } = req.body;
   if (!["approved", "rejected"].includes(status))
     return res.status(400).json({ error: "Status must be approved or rejected." });
-  const request = db.prepare("SELECT * FROM vm_requests WHERE id=?").get(req.params.id);
+  const request = db.prepare("SELECT id, student_db_id, student_name, student_id, template_uuid, template_name, status FROM vm_requests WHERE id=?").get(req.params.id);
   if (!request) return res.status(404).json({ error: "Request not found." });
 
   if (status === "approved") {
@@ -884,7 +940,7 @@ studentApp.get("/api/attendance/check", (req, res) => {
 // ── Attendance today (admin port 4000) ────────────────────────────────────────
 adminApp.get("/api/attendance/today", (req, res) => {
   const rows = db.prepare(
-    "SELECT * FROM attendance WHERE date(checked_at)=date('now','localtime') ORDER BY checked_at ASC"
+    "SELECT id, student_db_id, student_id, student_name, checked_at FROM attendance WHERE date(checked_at)=date('now','localtime') ORDER BY checked_at ASC"
   ).all();
   res.json({ attendance: rows });
 });

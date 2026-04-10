@@ -1,15 +1,3 @@
 ```
-# Compiled and build artifacts
-*.css.map
-*.js.map
-*.min.css
-*.min.js
-# Dependencies
 node_modules/
-# Logs and temp files
-*.log
-*.tmp
-# Editors
-.vscode/
-.idea/
 ```
