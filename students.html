@@ -205,6 +205,38 @@ th:hover .col-actions{opacity:1}
     </div>
   </div>
 
+  <!-- ── XCP-ng Host Configuration Card ── -->
+  <div class="settings-card" style="border-left: 4px solid var(--accent);">
+    <div class="settings-left">
+      <h3>XCP-ng Host Configuration</h3>
+      <p>Manage your XCP-ng server connection settings</p>
+      <div style="margin-top: 8px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <span class="vm-chip" id="xcpng-host-chip">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+          <span id="xcpng-host-display">Loading...</span>
+        </span>
+        <span class="vm-chip" id="xcpng-user-chip" style="background:var(--success-bg);border-color:var(--success-bd);color:var(--success);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span id="xcpng-user-display">Loading...</span>
+        </span>
+        <span class="req-badge req-pending" id="xcpng-status-badge" style="display:none;">
+          <span class="req-dot"></span>
+          <span id="xcpng-status-text">Not Configured</span>
+        </span>
+      </div>
+    </div>
+    <div class="settings-right" style="display: flex; gap: 8px;">
+      <button class="btn btn-sm btn-ghost" onclick="openXcpngConfigModal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Configure
+      </button>
+      <button class="btn btn-sm btn-primary" onclick="testXcpngConnection()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Test Connection
+      </button>
+    </div>
+  </div>
+
   <!-- ── Tabs ── -->
   <div class="tabs">
     <button class="tab active" id="tab-students" onclick="switchTab('students')">
@@ -738,6 +770,171 @@ async function submitRenameCol(id) {
     else{closeModal();flash(`Column renamed to "${name}".`);await loadData();}
   } catch{closeModal();flash('Server error.','error');}
 }
+
+/* ── XCP-ng Configuration Functions ── */
+let xcpngConfigData = null;
+
+async function loadXcpngConfig() {
+  try {
+    const res = await fetch(`${API}/admin/xcpng-config`);
+    const data = await res.json();
+    if (data.ok) {
+      xcpngConfigData = data;
+      document.getElementById('xcpng-host-display').textContent = data.host || 'Not set';
+      document.getElementById('xcpng-user-display').textContent = data.username || 'Not set';
+      
+      const badge = document.getElementById('xcpng-status-badge');
+      const statusText = document.getElementById('xcpng-status-text');
+      
+      if (data.configured) {
+        badge.className = 'req-badge req-approved';
+        statusText.textContent = 'Connected';
+        badge.style.display = 'inline-flex';
+      } else {
+        badge.className = 'req-badge req-pending';
+        statusText.textContent = 'Password not set';
+        badge.style.display = 'inline-flex';
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load XCP-ng config:', err);
+    document.getElementById('xcpng-host-display').textContent = 'Error loading';
+    document.getElementById('xcpng-user-display').textContent = 'Error';
+  }
+}
+
+function openXcpngConfigModal() {
+  const host = xcpngConfigData?.host || '';
+  const username = xcpngConfigData?.username || '';
+  
+  showModal(`<div class="modal">
+    <h2>Configure XCP-ng Host</h2>
+    <p>Enter your XCP-ng server connection details.</p>
+    <div class="modal-field">
+      <label>Host Address *</label>
+      <input type="text" id="m_xcpng_host" value="${esc(host)}" placeholder="e.g. 192.168.100.2 or xcpng.example.com" autocomplete="off"/>
+      <div class="modal-err" id="m_xcpng_host_e"></div>
+    </div>
+    <div class="modal-field">
+      <label>Username *</label>
+      <input type="text" id="m_xcpng_user" value="${esc(username)}" placeholder="e.g. root" autocomplete="off"/>
+      <div class="modal-err" id="m_xcpng_user_e"></div>
+    </div>
+    <div class="modal-field">
+      <label>Password</label>
+      <input type="password" id="m_xcpng_pass" placeholder="Leave blank to keep current password" autocomplete="off"/>
+      <div style="font-size:.73rem;color:var(--text-light);margin-top:4px">Only enter a new password if you want to change it</div>
+      <div class="modal-err" id="m_xcpng_pass_e"></div>
+    </div>
+    <div id="m_xcpng_alert" style="font-size:.82rem;color:var(--error);margin-top:8px;display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="submitXcpngConfig()" id="m_xcpng_btn">Save Configuration</button>
+    </div>
+  </div>`);
+  
+  document.getElementById('m_xcpng_host').focus();
+  document.getElementById('m_xcpng_host').onkeydown = e => { if(e.key==='Enter') document.getElementById('m_xcpng_user').focus(); };
+  document.getElementById('m_xcpng_user').onkeydown = e => { if(e.key==='Enter') document.getElementById('m_xcpng_pass').focus(); };
+  document.getElementById('m_xcpng_pass').onkeydown = e => { if(e.key==='Enter') submitXcpngConfig(); };
+}
+
+async function submitXcpngConfig() {
+  const host = document.getElementById('m_xcpng_host').value.trim();
+  const username = document.getElementById('m_xcpng_user').value.trim();
+  const password = document.getElementById('m_xcpng_pass').value;
+  
+  ['m_xcpng_host_e', 'm_xcpng_user_e', 'm_xcpng_pass_e'].forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = '';
+    el.style.display = 'none';
+  });
+  
+  let ok = true;
+  if (!host || host.length < 3) {
+    const el = document.getElementById('m_xcpng_host_e');
+    el.textContent = 'Valid host required (min 3 chars)';
+    el.style.display = 'block';
+    ok = false;
+  }
+  if (!username || username.length < 2) {
+    const el = document.getElementById('m_xcpng_user_e');
+    el.textContent = 'Valid username required (min 2 chars)';
+    el.style.display = 'block';
+    ok = false;
+  }
+  
+  if (!ok) return;
+  
+  const btn = document.getElementById('m_xcpng_btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Saving…';
+  
+  try {
+    const res = await fetch(`${API}/admin/xcpng-config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ host, username, password: password || undefined })
+    });
+    
+    const data = await res.json();
+    if (!res.ok) {
+      const alert = document.getElementById('m_xcpng_alert');
+      alert.textContent = data.error || 'Failed to save configuration.';
+      alert.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Save Configuration';
+    } else {
+      closeModal();
+      flash(data.message || 'XCP-ng configuration updated successfully.', 'success');
+      await loadXcpngConfig();
+    }
+  } catch (err) {
+    closeModal();
+    flash('Server error. Please try again.', 'error');
+    console.error(err);
+  }
+}
+
+async function testXcpngConnection() {
+  if (!xcpngConfigData) {
+    flash('Please configure XCP-ng settings first.', 'warn');
+    return;
+  }
+  
+  const btn = event.target.closest('button');
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Testing…';
+  
+  try {
+    const res = await fetch(`${API}/admin/test-xcpng-connection`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        host: xcpngConfigData.host,
+        username: xcpngConfigData.username,
+        password: process.env.XCPNG_PASS || ''
+      })
+    });
+    
+    const data = await res.json();
+    if (data.ok) {
+      flash(data.message, 'success');
+    } else {
+      flash(data.error || 'Connection test failed.', 'error');
+    }
+  } catch (err) {
+    flash('Cannot reach server for connection test.', 'error');
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+  }
+}
+
+// Load XCP-ng config on page load
+loadXcpngConfig();
 </script>
 </body>
 </html>
