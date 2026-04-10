@@ -1,7 +1,17 @@
 {
+  "name": "lab44",
+  "version": "1.0.0",
+  "description": "Lab44 Student Grades + VM Management System - Security Hardened",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
   "dependencies": {
     "better-sqlite3": "^12.8.0",
     "cors": "^2.8.6",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "express-rate-limit": "^7.5.0"
   }
 }
